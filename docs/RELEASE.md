@@ -401,3 +401,22 @@ and explicitly notes no provider writes, no lab model training and no
 independent scientific validation. This converts a previously one-off
 developer browser check into an auditable, reproducible 3D graphics gate
 without fabricating biology or confusing screenshots with measurements.
+
+### Protected-main static 3D canary coverage
+
+A browser canary restricted to HTML-only PR paths can pass when modified but
+**cannot** be made a GitHub required status check: a docs-only or backend-only
+PR would not trigger it, leaving the protected-main check pending forever.
+
+The required-check admission upgrade therefore makes the read-only
+static-browser-canary.yml run on **all** pull requests and protected-main
+pushes, even when only documentation changes. This adds real Chromium
+runtime minutes but ensures the source-level visual 3D failure cannot be
+skipped by changing an adjacent file. The pinned 1.64.0 Playwright browser
+test is additive to existing WINK source-contracts, Python service, public
+readback and Docker bundle checks.
+
+This requirement applies to GitHub source admission only. Passing source
+Chromium must NEVER automatically approve the HF environment reviewer,
+maintenance window, provider token, HF SDK migration, lab signatures,
+labeled biological data or GPU training.
