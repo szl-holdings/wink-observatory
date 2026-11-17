@@ -78,10 +78,19 @@ def observe(target: str) -> dict:
             errors: list[str] = []
             page.on("pageerror", lambda exception: errors.append(str(exception)[:220]))
             status = page.goto(url, wait_until="domcontentloaded", timeout=25000)
+            # Playwright follows redirects. Attribute evidence to the observed
+            # document, never merely the requested URL.
+            if page.url != url or (status is not None and status.url != url):
+                return {"schema": "wink.browser-smoke/v1",
+                        "state": "UNEXPECTED_BROWSER_ORIGIN",
+                        "http": status.status if status else None,
+                        "actual_browser_render_verified": False,
+                        "url": page.url, "requested_url": url,
+                        "response_url": status.url if status else None}
             if status is None or status.status != 200:
                 return {"schema": "wink.browser-smoke/v1", "state": "HTTP_NOT_200",
                         "http": status.status if status else None,
-                        "actual_browser_render_verified": False, "url": url}
+                        "actual_browser_render_verified": False, "url": page.url}
             try:
                 page.wait_for_function(
                     """() => {
@@ -133,7 +142,8 @@ def observe(target: str) -> dict:
             node_count_gate, node_count_observed = node_count_admission(
                 target, data.get("renderedNodes")
             )
-            rendered = (source_loaded and panels_ready and
+            rendered = (page.url == url and status.url == url and
+                        source_loaded and panels_ready and
                         data.get("hasWebGL") is True and
                         isinstance(data.get("canvasWidth"), int) and
                         data["canvasWidth"] > 100 and
@@ -148,7 +158,9 @@ def observe(target: str) -> dict:
                         len(errors) == 0)
             return {
                 "schema": "wink.browser-smoke/v1",
-                "url": url,
+                "url": page.url,
+                "requested_url": url,
+                "response_url": status.url,
                 "observed_utc": datetime.now(timezone.utc).isoformat(),
                 "state": "SOURCE_AND_3D_CLIENT_BOOT_VERIFIED"
                          if rendered else "HOLD_CLIENT_BOOT_OR_DATA_UNAVAILABLE",
