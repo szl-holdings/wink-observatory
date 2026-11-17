@@ -11,7 +11,7 @@ This is arithmetic for an auditor's decision, not an inference of model quality.
 """
 from __future__ import annotations
 
-from math import floor, isfinite
+from math import isfinite
 from typing import Any
 
 SUPPORTED = {"criterion_2_contamination", "criterion_3_refusal",
@@ -76,7 +76,18 @@ def audit(record: dict) -> dict:
         elif id in ("criterion_3_refusal", "criterion_4_neutral"):
             baseline = _number(c.get("base_rate") if id=="criterion_3_refusal"
                                else c.get("base_accuracy"), "BASELINE")
-            tolerance = _number(c.get("tolerance"), "TOLERANCE")
+            if id == "criterion_4_neutral":
+                # This historical receipt does not expose a numeric tolerance.
+                # Only the exact reviewed rule literal authorizes this arithmetic;
+                # a changed or unknown rule remains unavailable, never a default.
+                if (c.get("rule") != "adapter neutral accuracy >= base neutral accuracy - 0.10"
+                        or "tolerance" in c):
+                    raise EvaluationUnavailable("NEUTRAL_RULE_REVIEW_REQUIRED")
+                tolerance = 0.10
+                tolerance_source = "REVIEWED_PUBLIC_RULE_LITERAL"
+            else:
+                tolerance = _number(c.get("tolerance"), "TOLERANCE")
+                tolerance_source = "STRUCTURED_RECEIPT_FIELD"
             threshold = baseline - tolerance
             max_fail = _at_most_for_strict_under(n, threshold)
             possible = max_fail >= 0
@@ -92,6 +103,7 @@ def audit(record: dict) -> dict:
         out.append({
             "criterion": id, "count": n, "operating_criterion": operating_criterion,
             "threshold": round(threshold, 8),
+            "tolerance_source": tolerance_source if operating_criterion == "RATE_GREATER_EQUAL" else None,
             "valid_binary_measurement_can_fail": possible,
             "mathematical_failure_witness": witness,
             "recorded_pass": c.get("recorded_pass") if type(c.get("recorded_pass")) is bool else None,
