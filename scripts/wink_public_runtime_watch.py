@@ -93,6 +93,7 @@ def classify(browser: Any, transport: Any) -> dict:
         "public_origin": STATIC_URL,
         "public_static_http_reachable": bool(static_http),
         "browser_observation_state": browser.get("state", "UNAVAILABLE"),
+        "browser_failure_type": browser.get("reason_type"),
         "browser_badge": browser.get("feed_badge"),
         "browser_feed_detail": browser.get("feed_detail"),
         "browser_webgl_draws_before": browser.get("webgl_draw_calls_before"),
@@ -121,7 +122,14 @@ def observe() -> dict:
     # Each target is fixed in source. The order avoids claiming a working
     # frontend based on HTTP metadata alone.
     transport = _load("wink_release_probe.py", "observe")()
-    browser = _load("wink_browser_smoke.py", "observe")("public")
+    try:
+        browser = _load("wink_browser_smoke.py", "observe")("public")
+    except Exception as exc:
+        # Playwright has its own Error/TimeoutError hierarchy. Keep the
+        # already-read transport evidence and a bounded, non-sensitive
+        # diagnostic rather than losing the entire receipt on browser failure.
+        browser = {"state": "BROWSER_UNAVAILABLE",
+                   "reason_type": type(exc).__name__[:80]}
     return classify(browser, transport)
 
 
