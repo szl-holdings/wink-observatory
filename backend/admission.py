@@ -11,6 +11,12 @@ def compute_status() -> dict:
     The reviewed gpu-bridge output schema, signer pin, source SHA and runtime
     freshness must be admitted separately. No private IPs, secrets or actions.
     """
+    if os.getenv("WINK_BRIDGE_PUBLIC_RECEIPTS", "0") == "1":
+        from backend.gpu_receipts import readback
+        receipt=readback()
+        return {**receipt, "gpu_job_launched": False,
+                "verified_runtime": False,
+                "note": "Published signed-queue evidence only; no direct GPU/host connection."}
     url = os.getenv("WINK_COMPUTE_STATUS_URL", "")
     host = os.getenv("WINK_COMPUTE_TRUSTED_HOST", "")
     if not url or not host:
