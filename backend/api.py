@@ -32,7 +32,7 @@ def healthz():
 @api.get("/readyz")
 def readyz():
     s=snapshot()
-    ok=fresh(s) and bool(s.get("dataset_revision"))
+    ok=fresh(s) and producer_fresh(s) and bool(s.get("dataset_revision"))
     return JSONResponse(status_code=200 if ok else 503,
                         content={"public_dataset":"READABLE" if ok else "UNAVAILABLE",
                                  "source_state":s["source_state"],"scientific_ready":False,
