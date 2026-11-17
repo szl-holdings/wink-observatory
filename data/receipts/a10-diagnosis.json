@@ -1,0 +1,24 @@
+{
+ "schema_version": "wink/diagnosis/v0.1",
+ "question": "Protocol v1.1 clause A10 / open item 4: neutral accuracy is recorded as 0.05 for both the base and the adapter; chance on a four-option item is 0.25. What is that measurement?",
+ "answered_at": "2026-11-17T03:15:00Z",
+ "answer": "The metric measures letter-format compliance, not correctness.",
+ "evidence": {
+  "code_refs": "heldout_eval.py, neutral_acc() ~L118-126; NEUTRAL_QA probe set ~L61",
+  "mechanism": "The scorer extracts an option letter from the model output by regex and scores ord(letter) - 65 == answer_index. Only a capital A-D in the expected position counts as an answer. Content answers (e.g. 'Canberra') and lowercase or verbose answers score as incorrect regardless of truth.",
+  "statistics": {
+   "p_random_guesser_scores_le_1_of_20": 0.0243,
+   "p_both_arms_identical_1_of_20_if_scoring_valid": 0.00059,
+   "conclusion": "Below-chance identical scores on both arms are the signature of a scoring artifact, not model behavior."
+  },
+  "consequence": "The 0.05/0.05 values are UNINTERPRETABLE and are not evidence of preservation (or degradation). The rule built on them is additionally unfalsifiable as observed (pass floor -0.05)."
+ },
+ "proposed_fix": [
+  "Score by content: exact/fuzzy match of the option text in the output, case-insensitive",
+  "Or force the letter format with an explicit instruction + few-shot example and validate format compliance separately",
+  "Report format-compliance and correctness as two distinct metrics",
+  "Re-run the battery; criterion 4 rewritten with a trippable rule and a power statement (A9)"
+ ],
+ "status": "CONFIRMED_AT_CODE_LEVEL",
+ "publication_note": "Published to the co-signatory's lab in this public dataset per protocol clause B2.1 (receipt exports)."
+}

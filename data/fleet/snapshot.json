@@ -1,0 +1,55 @@
+{
+ "schema_version": "wink/fleet-snapshot/v0.1",
+ "captured_at": "2026-11-17T03:15:00Z",
+ "provider": "Salad (alloyscape org)",
+ "totals": {
+  "groups": 92,
+  "active": 27,
+  "itemized_here": 7
+ },
+ "honest_note": "Totals are provider-reported counts. Only groups with operator-verified status are itemized; absence from this list is not evidence a group does not exist.",
+ "groups": [
+  {
+   "name": "szl-train-frontier-v5-r7",
+   "lane": "training",
+   "status": "parked",
+   "detail": "v5 battery training run r7 — 200/200 complete"
+  },
+  {
+   "name": "szl-bench-frontier-v5-r1",
+   "lane": "benchmark",
+   "status": "parked",
+   "detail": "v5 bench receipt emitted 08:19Z Nov 16"
+  },
+  {
+   "name": "szl-heldout-frontier-v5-r1",
+   "lane": "heldout-eval",
+   "status": "parked",
+   "detail": "v5 held-out receipt emitted 07:15Z Nov 16 — A9/A10 findings open"
+  },
+  {
+   "name": "szl-train-distill-sft-v1-r1",
+   "lane": "training",
+   "status": "stopped",
+   "detail": "Stopped by provider PM 2026-11-16 during crash-loop investigation"
+  },
+  {
+   "name": "flagship54",
+   "lane": "flagship",
+   "status": "running",
+   "detail": "Flagship healthy — heartbeat hb587+ at 2026-11-16T11:30Z"
+  },
+  {
+   "name": "szl-salad-inference",
+   "lane": "inference",
+   "status": "degraded",
+   "detail": "Public tunnel flapping (provider incident, under investigation)"
+  },
+  {
+   "name": "szl-hatun-mcp-v2",
+   "lane": "inference",
+   "status": "degraded",
+   "detail": "Public tunnel flapping (provider incident, under investigation)"
+  }
+ ]
+}
