@@ -5,7 +5,7 @@ colorFrom: indigo
 colorTo: blue
 sdk: docker
 app_port: 7860
-license: mit
+license: apache-2.0
 short_description: Python-first research observability with evidence honesty
 tags:
 - scientific-reproducibility
@@ -33,6 +33,9 @@ Data: https://huggingface.co/datasets/SZLHOLDINGS/wink-observatory-data
 Lab: https://agvg75.github.io/lab/
 Readiness: /readyz (HTTP 503 if public source is unavailable)
 Methods: /docs
+
+The deployed public Space already declares Apache-2.0; preserve that public
+card identity until the source owner separately resolves source/HF licensing.
 
 Publication must be via the single source-owned, revision-gated manual workflow.
 This candidate may require an HF org plan change for Docker SDK; the existing
