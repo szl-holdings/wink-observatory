@@ -225,10 +225,18 @@ def summary(s: dict) -> dict:
     docs = s.get("docs") or {}
     fleet, protocol = docs.get("fleet") or {}, docs.get("protocol") or {}
     witness, heldout = docs.get("witness") or {}, docs.get("heldout") or {}
+    try:
+        age = int((datetime.now(timezone.utc) - utc(fleet.get("captured_at"))).total_seconds())
+    except (SourceUnavailable, TypeError, KeyError, ValueError):
+        age = None
+    telemetry_state = ("FRESH" if age is not None and 0 <= age <= 900
+                       else "STALE" if age is not None else "UNKNOWN")
     return {"source_state": s["source_state"], "source_kind": s["source_kind"],
             "dataset_id": DATASET, "dataset_revision": s["dataset_revision"],
             "readback_at": s["retrieved_at"],
             "source_snapshot_at": fleet.get("captured_at"),
+            "producer_telemetry_state": telemetry_state,
+            "producer_snapshot_age_seconds": age,
             "provider_reported_groups": (fleet.get("totals") or {}).get("groups"),
             "provider_reported_active": (fleet.get("totals") or {}).get("active"),
             "operator_itemized": len(fleet.get("groups") or []),
@@ -241,3 +249,6 @@ def summary(s: dict) -> dict:
 
 def fresh(s: dict) -> bool:
     return s.get("source_state") in {"PUBLIC_DATASET_READBACK", "RECENT_READBACK_CACHE"}
+
+def producer_fresh(s: dict) -> bool:
+    return summary(s)["producer_telemetry_state"] == "FRESH"
