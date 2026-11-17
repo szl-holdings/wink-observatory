@@ -1,0 +1,96 @@
+name: WINK HF Python publisher (owner manual only)
+on:
+  workflow_dispatch:
+    inputs:
+      expected_main_sha:
+        description: "Exact protected main SHA; must equal workflow checkout"
+        required: true
+        type: string
+      expected_hf_sha:
+        description: "Exact current HF Space git SHA; rollback identity"
+        required: true
+        type: string
+      open_deploy_window:
+        description: "Reviewed maintenance window is OPEN"
+        required: true
+        type: boolean
+        default: false
+      sdk_migration_approved:
+        description: "Owner verified org Docker eligibility, billing and license"
+        required: true
+        type: boolean
+        default: false
+      rollback_ready:
+        description: "Prior public HTML/CSS and HF git revision are preserved"
+        required: true
+        type: boolean
+        default: false
+permissions:
+  contents: read
+concurrency:
+  group: wink-hf-single-writer
+  cancel-in-progress: false
+jobs:
+  publish:
+    if: github.repository == 'szl-holdings/wink-observatory' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment:
+      name: hf-wink-production
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.12"
+      - name: Require exact live protected main and explicit deployment scope
+        env:
+          EXPECTED: ${{ inputs.expected_main_sha }}
+          HF_SHA: ${{ inputs.expected_hf_sha }}
+          OPEN: ${{ inputs.open_deploy_window }}
+          SDK: ${{ inputs.sdk_migration_approved }}
+          ROLLBACK: ${{ inputs.rollback_ready }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          current="$(git ls-remote origin refs/heads/main | cut -f1)"
+          test "$GITHUB_SHA" = "$EXPECTED" && test "$current" = "$EXPECTED"
+          [[ "$HF_SHA" =~ ^[0-9a-f]{40}$ ]]
+          test "$OPEN" = "true" && test "$SDK" = "true" && test "$ROLLBACK" = "true"
+          python backend/validate.py
+          python -B -m unittest discover -s tests -p 'test_python_observatory.py' -v
+      - name: Create exact Python Space bundle (no deletions)
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist/hf-space
+          cp -a backend data app.py Dockerfile requirements.txt dist/hf-space/
+          cp deploy/hf/README.md dist/hf-space/README.md
+          printf '%s\n' "$GITHUB_SHA" > dist/hf-space/SOURCE_REVISION
+          test "$(cat dist/hf-space/SOURCE_REVISION)" = "$GITHUB_SHA"
+      - name: Install the publisher client (no application dependencies)
+        run: python -m pip install --disable-pip-version-check huggingface_hub==2.4.0
+      - name: Compare-and-swap publish to existing Space
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          EXPECTED_MAIN_SHA: ${{ inputs.expected_main_sha }}
+          EXPECTED_HF_SHA: ${{ inputs.expected_hf_sha }}
+          APPROVED_WINDOW: ${{ inputs.open_deploy_window }}
+          SDK_MIGRATION_APPROVED: ${{ inputs.sdk_migration_approved }}
+          ROLLBACK_READY: ${{ inputs.rollback_ready }}
+        run: python -I -B scripts/publish_hf_python.py
+      - name: Read back deployment (runtime verification is separately required)
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json,urllib.request
+          url="https://huggingface.co/api/spaces/SZLHOLDINGS/wink-observatory"
+          with urllib.request.urlopen(url,timeout=12) as r:
+              data=json.load(r)
+          assert data.get("cardData",{}).get("sdk")=="docker", "Space SDK not converted"
+          print(json.dumps({"source":"public-HF-metadata","space_sha":data.get("sha"),
+                            "sdk":"docker","independent_runtime_verified":False}))
+          PY

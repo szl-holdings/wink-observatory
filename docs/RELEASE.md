@@ -1,0 +1,58 @@
+# WINK release admission and rollback — HOLD until independently verified
+
+## Immutable identity map
+
+- GitHub canonical source: szl-holdings/wink-observatory protected main SHA.
+- HF destination: SZLHOLDINGS/wink-observatory, last observed public revision
+  01e1021e7e1d80a0d4754fa01ca84282cb854c85 (as of 2026-11-17 04:58 UTC).
+- Current HF SDK: static. Proposed target: Docker + FastAPI/Gradio Python,
+  port 7860. This SDK migration is a provider cost/capability decision.
+- Public data source: SZLHOLDINGS/wink-observatory-data, exact revision sampled
+  independently on each request; file readback uses pinned git revision.
+- GPU authority: szl-holdings/szl-gpu-bridge existing signed queue (not WINK).
+- Lab evidence: WINK v1.1 draft, Part D witnesses not started, A9/A10 open.
+
+## Owner-controlled deployment preconditions
+
+1. Confirm HF organization permits Docker SDK and its compute charges; no implicit
+   paid hardware change or automatic training is allowed.
+2. Review the true existing static HF Space, preserve its immutable revision,
+   repository sources, README/index.html/style.css and rollback controls. The
+   new publisher **adds/replaces files without deleting old source files**.
+3. Merge this reviewed Python change under normal GitHub protections, run native
+   exact-main Python CI and data validation, and verify owner/release authorization.
+4. Configure a dedicated fine-grained HF_TOKEN in GitHub Actions (value never
+   logged), plus protection and required reviewers on the hf-wink-production
+   GitHub environment. The environment name itself is not a review.
+5. Manually dispatch the sole publisher against exact protected main with:
+   expected_main_sha, expected_hf_sha, open_deploy_window=true,
+   sdk_migration_approved=true, and rollback_ready=true. It must stop on any
+   identity movement, missing approval, unavailable state or closed window.
+6. Read back the new HF git revision and SDK, then validate actual public GET /
+   (200), /healthz (200), /readyz (200 only on current public data), /api/v1/observatory
+   (200 with dataset SHA) and /api/v1/build-info. If any fail, HOLD the release
+   and restore the pinned prior Space revision through the owner publisher.
+7. Independently repeat the source/module hash parity and source/Space/boot
+   identity verification; source files, HTTP reachability and runtime authority
+   are three different evidence states. A signed dataset/lab receipt is another.
+
+## Go/no-go contract
+
+Process reachability != source parity != evidence validity != owner authority
+!= deployed revision != independent runtime witness. Missing any required field
+gives HOLD, not green. Never merge or publish merely because PR-head CI passed.
+Training is separately denied until it has rights, labels, animal/session-disjoint
+split, reviewed A9/A10 criteria, signed job and explicitly bounded GPU budget.
+
+### Known current holds
+
+- Direct wet-lab instrument acquisition: NOT CONNECTED.
+- Independent co-signatures / A3 observer / protocol freeze: NOT VERIFIED.
+- Part D records: 0; no genesis record should be fabricated.
+- C. elegans locomotion video/labels: NOT PROVIDED.
+- Signed HPC compute/owner budget in this WINK route: NOT ADMITTED.
+- HF static-to-Docker eligibility: NOT VERIFIED.
+- Production source-HF runtime parity: NOT VERIFIED.
+
+Avoid inventing performance metrics for investors. Do not use patient records,
+unlicensed scientific datasets, or confidential lab footage in public Spaces.
