@@ -111,7 +111,8 @@ def validate(docs: dict) -> None:
     if not isinstance(groups, list) or not isinstance(totals, dict) or len(groups) > 250:
         raise SourceUnavailable("FLEET_INCOMPLETE")
     if any(not isinstance(row, dict) or row.get("status") not in
-           {"running", "parked", "complete", "degraded", "stopped", "not-found"} for row in groups):
+           {"running", "parked", "complete", "degraded", "stopped", "not-found"}
+           for row in groups):
         raise SourceUnavailable("FLEET_STATUS_INVALID")
     n, itemized, active = (totals.get(k) for k in ("groups", "itemized_here", "active"))
     if (any(type(v) is not int or v < 0 for v in (n, itemized, active))
@@ -232,6 +233,11 @@ def summary(s: dict) -> dict:
         age = None
     telemetry_state = ("FRESH" if age is not None and 0 <= age <= 900
                        else "STALE" if age is not None else "UNKNOWN")
+    entries = fleet.get("groups")
+    # Missing provider evidence is unavailable, not a measured zero.
+    itemized = len(entries) if isinstance(entries, list) else None
+    not_found = (sum(row.get("status") == "not-found" for row in entries)
+                 if isinstance(entries, list) else None)
     return {"source_state": s["source_state"], "source_kind": s["source_kind"],
             "dataset_id": DATASET, "dataset_revision": s["dataset_revision"],
             "readback_at": s["retrieved_at"],
@@ -240,7 +246,9 @@ def summary(s: dict) -> dict:
             "producer_snapshot_age_seconds": age,
             "provider_reported_groups": (fleet.get("totals") or {}).get("groups"),
             "provider_reported_active": (fleet.get("totals") or {}).get("active"),
-            "operator_itemized": len(fleet.get("groups") or []),
+            "operator_itemized": itemized,
+            "operator_not_found_itemized": not_found,
+            "not_found_count_is_live_health": False,
             "witness_records": len(witness.get("records") or []),
             "protocol_frozen": (protocol.get("freeze") or {}).get("frozen"),
             "heldout_verdict": heldout.get("overall_verdict", "UNAVAILABLE"),

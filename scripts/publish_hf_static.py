@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""One-time, manually approved WINK static HTML repair — never a Docker migration.
+"""Revision-pinned, manually approved WINK static HTML repair — never Docker migration.
 
 The only allowed effect is replacing index.html in the EXISTING public static
 Space with exact GitHub protected-main bytes. No README, SDK, other files,
@@ -26,12 +26,16 @@ from huggingface_hub import HfApi
 
 SPACE = "SZLHOLDINGS/wink-observatory"
 SOURCE_REPO = "szl-holdings/wink-observatory"
-ORIGINAL_HF = "41d90e0646b84f282e9461279eb54325d5897cf7"
+# Every provider revision is owner-supplied, exact and independently read back.
 SHA40 = re.compile(r"[a-f0-9]{40}\Z")
 ROOT = Path(__file__).resolve().parents[1]
 FILE = ROOT / "frontend" / "index.html"
 observed_sdk = run_path(str(Path(__file__).resolve().with_name("hf_sdk_card_gate.py")),
                         run_name="_wink_hf_card_gate")["observed_sdk"]
+prior_git_blob = run_path(
+    str(Path(__file__).resolve().with_name("wink_rollback_snapshot.py")),
+    run_name="_wink_public_git_blob",
+)["git_blob"]
 
 
 class AdmissionHold(ValueError):
@@ -52,6 +56,20 @@ def read_main_lease(expected: str) -> None:
     require(res.returncode == 0 and
             res.stdout.strip() == (expected + "\trefs/heads/main").encode("ascii"),
             "PROTECTED_MAIN_MOVED_OR_UNAVAILABLE")
+
+
+def verify_previous_ancestor(previous: str, current: str) -> None:
+    """The previous provider HTML must belong to protected Git history."""
+    require(bool(SHA40.fullmatch(previous)) and bool(SHA40.fullmatch(current)),
+            "STATIC_SOURCE_ANCESTRY_INVALID")
+    try:
+        result = subprocess.run(
+            ["git", "merge-base", "--is-ancestor", previous, current],
+            cwd=ROOT, capture_output=True, timeout=15, check=False,
+        )
+    except (OSError, subprocess.SubprocessError) as exc:
+        raise AdmissionHold("STATIC_SOURCE_HISTORY_UNAVAILABLE") from exc
+    require(result.returncode == 0, "PREVIOUS_STATIC_SOURCE_NOT_PROTECTED_ANCESTOR")
 
 
 def read_source_bytes(expected: str) -> bytes:
@@ -95,7 +113,7 @@ def public_readback(sha: str) -> bytes:
             content = r.read(120001)
     except (HTTPError, URLError, OSError, TimeoutError) as exc:
         raise AdmissionHold("PROVIDER_RAW_READBACK_UNAVAILABLE") from exc
-    require(25000 < len(content) <= 120000, "PROVIDER_RAW_BYTES_UNAVAILABLE")
+    require(15000 < len(content) <= 120000, "PROVIDER_RAW_BYTES_UNAVAILABLE")
     return content
 
 
@@ -103,9 +121,14 @@ def main() -> int:
     main_sha = os.environ.get("GITHUB_SHA", "")
     expected_main = os.environ.get("EXPECTED_MAIN_SHA", "")
     old_hf = os.environ.get("EXPECTED_HF_SHA", "")
+    previous_source = os.environ.get("EXPECTED_DEPLOYED_SOURCE_SHA", "")
     require(isinstance(main_sha, str) and SHA40.fullmatch(main_sha) is not None and
             main_sha == expected_main, "SOURCE_SHA_NOT_EXACT_MAIN")
-    require(old_hf == ORIGINAL_HF, "STATIC_ROLLBACK_PREDECESSOR_NOT_PINNED")
+    require(isinstance(old_hf, str) and SHA40.fullmatch(old_hf) is not None,
+            "EXACT_PUBLIC_HF_PREDECESSOR_REQUIRED")
+    require(isinstance(previous_source, str) and
+            SHA40.fullmatch(previous_source) is not None and previous_source != main_sha,
+            "EXACT_PREVIOUS_GITHUB_SOURCE_REQUIRED")
     require(os.environ.get("APPROVED_WINDOW") == "true", "DEPLOYMENT_WINDOW_CLOSED")
     require(os.environ.get("STATIC_REPAIR_APPROVED") == "true",
             "STATIC_HTML_REPAIR_NOT_APPROVED")
@@ -114,6 +137,10 @@ def main() -> int:
     require(bool(token), "PUBLISHER_CREDENTIAL_UNAVAILABLE")
     read_main_lease(main_sha)
     exact = read_source_bytes(main_sha)
+    verify_previous_ancestor(previous_source, main_sha)
+    predecessor_blob = prior_git_blob(previous_source)
+    require(15000 < len(predecessor_blob) < 120000,
+            "PREVIOUS_SOURCE_BYTES_INVALID")
 
     # Validate the exact immutable existing Space in the provider before effects.
     api = HfApi(token=token)
@@ -122,6 +149,10 @@ def main() -> int:
             "HF_STATIC_SOURCE_MOVED_OR_PRIVATE")
     require(observed_sdk(original.card_data) == "static",
             "HF_SPACE_NOT_STATIC_OR_UNREVIEWED")
+    # A human-reviewed backup must bind the *current* provider predecessor
+    # to an actual ancestor of protected GitHub main, not an invented SHA.
+    require(public_readback(old_hf) == predecessor_blob,
+            "PUBLIC_HF_PREDECESSOR_NOT_EXACT_GITHUB_SOURCE")
 
     # The server enforces parent_commit as an optimistic concurrency lease.
     # A second GitHub lease is observed immediately before requesting the write.

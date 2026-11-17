@@ -26,39 +26,44 @@ decision-makers through a live 3D observational metaphor and accessible views.
 - Strict checksum/chain validation and native GitHub Actions tests.
 - Non-root Docker candidate and a manual, expected-revision HF publisher.
 
-**The existing public static URL is HTTP reachable but its published
-JavaScript did not finish booting as of the November 17 browser check.**
-An independent Chromium browser showed the original HTML ending in a partial
-`for (` expression with no closing module script/body/html. The static site
-still returned GET /index.html HTTP 200, but displayed `BOOT`,
-`starting...`, and `loading...` placeholders rather than a functioning
-Three.js dashboard. The earlier opposite claim relied on HTTP transport
-only and is superseded.
+**November 17 release outcome: HF source publication succeeded;
+public dataset-qualified client acceptance remains HOLD.** The owner-approved
+HTML-only release changed HF Space source revision from 01e1021e... to
+41d90e0646b84f282e9461279eb54325d5897cf7. Its new index.html
+is an exact byte-for-byte copy of protected GitHub commit b118d2dc...
+and the interactive Three.js scene now performs actual WebGL drawing.
 
-The corrected GitHub candidate restores the complete 3D render loop,
-navigation and responsive canvas, reads public Hugging Face dataset files
-at an immutable single revision, displays source age, and fails closed to
-STALE SNAPSHOT or OFFLINE BASELINE rather than inventing live lab records.
-A real headless Chromium browser successfully loaded the candidate,
-displayed its public receipt/protocol panels and a STALE SNAPSHOT badge,
-with no JavaScript exceptions or failed HTTP requests. This result was
-obtained on the authorized development computer, **not** on a new deployed
-Hugging Face revision.
+The real public browser nonetheless fell back to OFFLINE BASELINE, and
+the post-publication workflow correctly FAILED. This was not a broken
+provider HTTP route or a failed source upload: the public producer
+published a newer data revision with 17 itemized fleet records, including
+legitimate not-found states. The first released frontend mistakenly
+expected exactly the original seven seed nodes, losing live source
+qualification as the dataset evolved.
 
-A separate, protected-owner-reviewed, manually dispatched **static HTML-only**
-publisher is prepared. It can replace only index.html after verified,
-archived four-file source rollback, exact source/HF leases, an actually open
-maintenance window, and owner deployment approval. It does **not** alter
-the static SDK, purchase compute, train models, or release the separate
-Python/Docker backend. No new scientific findings or live wet-lab streams
-are implied by a functioning 3D visualization.
+The revised **GitHub candidate** constructs its 3D fleet nodes from the
+actual validated public snapshot, bounds item count, disposes prior
+graphics resources, labels not-found entries, and reports the number
+itemized separately from the larger estate total. Headless Chromium
+verified all 17 public snapshot nodes and correctly showed source
+freshness rather than fabricated live wet-lab instrumentation. This
+fix is **not in the public Space** until a subsequent separately
+owner-reviewed static HTML-only publication passes real deployed Chromium
+verification. The existing Python/Docker backend remains undeployed.
+
+The static HTML publisher is kept manual-only, source- and HF-revision-bound,
+with immutable full four-file rollback, protected GitHub main checks,
+explicit current HF predecessor and historical protected GitHub source
+byte identity, and a separately approved maintenance window. A passing
+browser display is not scientific method validation, animal-lab data
+authorization, a trained biological model or independent co-signature.
 
 ## What is not claimed
 
 No deployed gene-editing capability, live microscope stream, clinical diagnosis,
 AI biological-discovery model, trained wet-lab model, authenticated partner
 countersignature, signed Part D record, paper acceptance, attributable revenue,
-running GPU job, provider authorization, or independently verified release.
+running GPU job, independent science admission, or automatic authorization for another release.
 
 The visible public v5 receipt records open issues: untrippable/low-power
 acceptance rules and an uninterpretable neutral-accuracy metric. The protocol

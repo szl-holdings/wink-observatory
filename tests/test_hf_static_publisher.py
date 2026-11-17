@@ -13,7 +13,8 @@ from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = "b" * 40
-OLD = "41d90e0646b84f282e9461279eb54325d5897cf7"
+PREVIOUS = "c" * 40
+OLD = "01e1021e7e1d80a0d4754fa01ca84282cb854c85"
 NEW = "a" * 40
 FILE = b"<!doctype html>\n" + b"X" * 30000 + b"</html>\n"
 
@@ -72,21 +73,28 @@ class StaticPublisherTests(unittest.TestCase):
             "GITHUB_SHA": SOURCE,
             "EXPECTED_MAIN_SHA": SOURCE,
             "EXPECTED_HF_SHA": OLD,
+            "EXPECTED_DEPLOYED_SOURCE_SHA": PREVIOUS,
             "APPROVED_WINDOW": "true",
             "STATIC_REPAIR_APPROVED": "true",
             "ROLLBACK_READY": "true",
             "HF_TOKEN": "NON_SECRET_TEST_SENTINEL",
         }
 
-    def run_approved(self, extra=None, source=FILE, readback=FILE):
+    def run_approved(self, extra=None, source=FILE, readback=FILE,
+                     prior_git=FILE, prior_http=FILE):
         env = {**self.env, **(extra or {})}
         out = StringIO()
+        def provider_readback(sha):
+            return prior_http if sha == env["EXPECTED_HF_SHA"] else readback
         with patch.dict(os.environ, env, clear=True), \
              patch.object(self.module, "read_main_lease") as lease, \
              patch.object(self.module, "read_source_bytes", return_value=source), \
-             patch.object(self.module, "public_readback", return_value=readback) as rd, \
+             patch.object(self.module, "verify_previous_ancestor") as ancestry, \
+             patch.object(self.module, "prior_git_blob", return_value=prior_git), \
+             patch.object(self.module, "public_readback", side_effect=provider_readback) as rd, \
              redirect_stdout(out):
             result = self.module.main()
+        ancestry.assert_called_once_with(env["EXPECTED_DEPLOYED_SOURCE_SHA"], SOURCE)
         return result, out.getvalue(), lease, rd
 
     def test_approved_exact_html_repair_only_preserves_sdk_and_source(self):
@@ -94,7 +102,9 @@ class StaticPublisherTests(unittest.TestCase):
         self.assertEqual(status, 0)
         self.assertIn("STATIC_HTML_SOURCE_BYTES_VERIFIED_RUNTIME_NOT_INDEPENDENTLY_PROVED", log)
         self.assertEqual(lease.call_count, 2)
-        rd.assert_called_once_with(NEW)
+        self.assertEqual(rd.call_count, 2)
+        rd.assert_any_call(OLD)
+        rd.assert_any_call(NEW)
         api = FakeHub.instances[0]
         self.assertEqual(api.sha, NEW)
         self.assertEqual(api.call["repo_type"], "space")
@@ -112,7 +122,9 @@ class StaticPublisherTests(unittest.TestCase):
             {"ROLLBACK_READY": "false"},
             {"HF_TOKEN": ""},
             {"EXPECTED_HF_SHA": "main"},
-            {"EXPECTED_HF_SHA": "c" * 40},
+            {"EXPECTED_DEPLOYED_SOURCE_SHA": "main"},
+            {"EXPECTED_DEPLOYED_SOURCE_SHA": SOURCE},
+            {"EXPECTED_DEPLOYED_SOURCE_SHA": ""},
             {"EXPECTED_MAIN_SHA": "c" * 40},
         )
         for edit in cases:
@@ -142,6 +154,45 @@ class StaticPublisherTests(unittest.TestCase):
         # The file has already been committed; we preserve and report its SHA
         # rather than pretending the write was rolled back.
         self.assertIsNotNone(FakeHub.instances[0].call)
+
+    def test_repeat_static_update_uses_actual_hf_and_previous_protected_source(self):
+        # Production's first release successfully committed exact raw HTML at
+        # HF 41d90e..., but failed its client boot due to evolving dataset.
+        latest = "41d90e0646b84f282e9461279eb54325d5897cf7"
+        previous = "b118d2dc9246df478ba5d5a96cfc6c4b783eb148"
+        FakeHub.start_sha = latest
+        status, out, leases, readback = self.run_approved({
+            "EXPECTED_HF_SHA": latest,
+            "EXPECTED_DEPLOYED_SOURCE_SHA": previous,
+        })
+        self.assertEqual(status, 0)
+        self.assertEqual(FakeHub.instances[0].call["parent_commit"], latest)
+        readback.assert_any_call(latest)
+        readback.assert_any_call(NEW)
+        self.assertEqual(leases.call_count, 2)
+
+    def test_old_public_source_byte_mismatch_blocks_any_write(self):
+        with self.assertRaisesRegex(
+            self.module.AdmissionHold,
+            "PUBLIC_HF_PREDECESSOR_NOT_EXACT_GITHUB_SOURCE",
+        ):
+            self.run_approved(prior_git=b"Y" * len(FILE), prior_http=FILE)
+        self.assertIsNone(FakeHub.instances[0].call)
+
+    def test_wrong_valid_hf_revision_still_blocks_provider_write(self):
+        with self.assertRaisesRegex(
+            self.module.AdmissionHold, "HF_STATIC_SOURCE_MOVED_OR_PRIVATE",
+        ):
+            self.run_approved({"EXPECTED_HF_SHA": "d" * 40})
+        self.assertIsNone(FakeHub.instances[0].call)
+
+    def test_protected_history_ancestry_is_not_bypassed(self):
+        with patch.object(self.module.subprocess, "run",
+                          return_value=SimpleNamespace(returncode=1)):
+            with self.assertRaisesRegex(
+                self.module.AdmissionHold, "PREVIOUS_STATIC_SOURCE_NOT_PROTECTED_ANCESTOR",
+            ):
+                self.module.verify_previous_ancestor(PREVIOUS, SOURCE)
 
     def test_no_arbitrary_client_revision_accepted(self):
         with self.assertRaisesRegex(self.module.AdmissionHold, "PROVIDER_SHA_UNAVAILABLE"):

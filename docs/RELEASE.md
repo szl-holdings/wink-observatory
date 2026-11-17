@@ -463,32 +463,71 @@ approval, the complete original immutable four-file rollback artifact and
 an expected GitHub/HF source-revision compare-and-swap. A scheduled public
 browser observer must NEVER set or bypass any of those switches.
 
+## November 17 13:18 UTC: real owner-approved HF write; client QA hold
 
----
+An actual protected-owner-reviewed static-only workflow was dispatched at
+13:16 UTC, approved, and **published** GitHub source commit
+b118d2dc9246df478ba5d5a96cfc6c4b783eb148 to the public HF Space.
+HF commit 41d90e0646b84f282e9461279eb54325d5897cf7 at 13:18:50 UTC
+has a 29,665-byte index.html with SHA-256
+486458dd32848e0cdf5107b2c4b0ecacf8a3cb8e086e0fa73e1eedd1d9c2e529.
+Its raw HTML bytes independently match protected GitHub main exactly.
+The Space remains PUBLIC and SDK=static. The old four-file static source
+was preserved by the workflow artifact before this authorized write.
 
-## Static HTML repair 2 - 2026-11-17 (owner-directed)
+**Do not claim production admission:** that workflow's post-write real
+Chromium test FAILED. While WebGL did execute real draw calls, the feed
+fell back to OFFLINE BASELINE. Public HF dataset had concurrently moved to
+revision 3a9d5b6285374571942422383cfdbaa09de8f960, with 17 itemized
+fleet groups (previously 7), and explicitly 'not-found' groups. The old
+frontend treated its original fixed seven scene meshes as a permanent
+source-schema cardinality and rejected 'not-found'. Its fallback did not
+disclose which public validation contract failed. A page showing 3D from
+illustrative seed values cannot be called operational research telemetry.
 
-Repair 1 (run 44091102121) published the reviewed complete index.html from
-protected main b118d2dc9246df478ba5d5a96cfc6c4b783eb148 to the static Space at
-2026-11-17T13:18:50Z, moving the provider from 01e1021e7e1d80a0d4754fa01ca84282cb854c85
-to 41d90e0646b84f282e9461279eb54325d5897cf7. Its Chromium client-boot smoke then
-correctly held: the live dataset producer had moved the fleet snapshot from the
-7-group seed to 17 operator-itemized groups including a legitimate not-found
-status, which the page contract rejected, so the public UI stayed on the
-offline baseline instead of displaying live telemetry.
+### Dynamic fleet repair at source
 
-This change (repair 2):
+The next source version renders **all** validated current fleet groups
+(up to a strict reviewed 256 cap) rather than binding the dataset to the
+old seed fleet size. Existing Three.js geometry, glow textures and materials
+are disposed on replacement to avoid memory growth across refreshes.
+It distinguishes 'not-found' in the status palette instead of silently
+dropping unavailable groups. Public metadata must satisfy exact fleet
+denominator identity, sane active<=total counts, known statuses, and the
+unchanged fail-closed A9/A10, witness and draft protocol gates.
 
-- frontend/index.html accepts a bounded live fleet (1..64 itemized groups),
-  renders worm telemetry nodes from the validated live snapshot rather than
-  the boot seed, and adds not-found to the legend.
-- backend/live_data.py, backend/validate.py and backend/ui.py accept the
-  not-found status from the same live producer.
-- scripts/publish_hf_static.py and publish-hf-static-repair.yml pin the new
-  predecessor 41d90e0646b84f282e9461279eb54325d5897cf7 with rollback source
-  b118d2dc9246df478ba5d5a96cfc6c4b783eb148; the two contract tests pin the
-  same revisions.
-- Science qualification, Docker migration and independent runtime admission
-  remain HOLD. The public dataset producer remains the only data authority;
-  the page displays exactly what the pinned dataset revision says, including
-  stale snapshots, and nothing is fabricated.
+The HUD explicitly reports both itemized and estate totals. A bounded
+machine-code-only source error is shown when a public response cannot
+be admitted. The Chromium canary now requires nonzero observed rendered
+fleet-node count; network transport HTTP 200 alone still cannot qualify
+the dataset or a trained model. This is a repaired **candidate** until its
+source is merged and explicitly owner-approved for HF deployment.
+
+### Subsequent static-only update: revision-bound, no bypass
+
+The previous one-shot static publisher intentionally pinned only HF
+revision 01e1021e... and the original 190488... GitHub HTML blob. That
+configuration correctly prevents a silent second write but is not a
+general recovery path once the owner has legitimately published the next
+static source.
+
+The revised owner-only workflow accepts three explicit exact, reviewed
+SHA identities: current protected GitHub main (new HTML), current HF
+Space parent (currently 41d90e...), and the historic protected GitHub
+source of the **currently deployed** HTML (currently b118d2...).
+Before any provider write, it independently verifies the complete
+four-file current HF static tree, proves the predecessor HTML bytes equal
+that historical protected GitHub ancestor, uploads an immutable rollback
+artifact including .gitattributes, and checks current-main lease,
+owner's maintenance-window approval, environment reviewer, and one-writer
+concurrency. It then uses HF parent_commit CAS to upload only index.html,
+verifies the exact new HF raw bytes and runs the real public Chromium
+canary. Its scope remains static HTML ONLY.
+
+No automatic retargeting of an old release to a moving HF branch is
+permitted. A failed post-write browser gate remains a failed admission,
+not an automatic rollback. A later update must be owner-approved
+again and use the newly observed exact parent/source revisions.
+No Python/Docker SDK migration, GPU budget, wet-lab instrument,
+partner countersignature, training license or scientific validity
+is inferred from a working static 3D visualization.

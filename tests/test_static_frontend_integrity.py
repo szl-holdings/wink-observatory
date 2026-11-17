@@ -89,6 +89,26 @@ class StaticFrontendIntegrityTests(unittest.TestCase):
                 self.assertIn(term, self.module)
         self.assertIn("function escapeHtml(", self.module)
 
+    def test_evolving_fleet_cardinality_is_rendered_not_silently_truncated(self):
+        # Public provider grew from 7 to 17 itemized groups on Nov 17.
+        # Count must derive from the same validated provider snapshot.
+        self.assertNotIn("fleet.groups.length !== nodeMeshes.length", self.module)
+        self.assertIn("fleet.groups.length > 256", self.module)
+        self.assertIn("FLEET_RENDER_COUNT_INVALID", self.module)
+        self.assertIn("function syncWormNodes(groups)", self.module)
+        self.assertIn("syncWormNodes(f.groups)", self.module)
+        self.assertIn("dataset.renderedNodes=String(nodeMeshes.length)", self.module)
+        self.assertIn("old.geometry.dispose()", self.module)
+        self.assertIn("child.material.map.dispose()", self.module)
+        self.assertIn("'not-found'", self.module)
+        self.assertIn("ITEMIZED", self.html)
+
+    def test_source_readback_error_reason_is_fail_closed_bounded_machine_code(self):
+        self.assertIn("PUBLIC_FLEET_ITEM_INVALID", self.module)
+        self.assertIn("PUBLIC_SOURCE_READBACK_FAILED", self.module)
+        self.assertIn("/^[A-Z0-9_]{5,90}$/", self.module)
+        self.assertIn("OFFLINE BASELINE", self.module)
+
     def test_real_chromium_source_canary_proves_draw_commands_and_moving_pixels(self):
         browser = (ROOT / "scripts/wink_browser_smoke.py").read_text(encoding="utf-8")
         ci = (ROOT / ".github/workflows/static-browser-canary.yml").read_text(encoding="utf-8")
