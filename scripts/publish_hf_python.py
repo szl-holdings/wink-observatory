@@ -8,6 +8,7 @@ import json
 import os
 from pathlib import Path
 import re
+import subprocess
 import sys
 
 from huggingface_hub import HfApi
@@ -34,6 +35,11 @@ def main():
     require(directory.is_dir() and (directory/"Dockerfile").is_file()
             and (directory/"SOURCE_REVISION").read_text().strip()==source,
             "SOURCE_BUNDLE_UNAVAILABLE")
+    main=subprocess.run(["git","ls-remote","origin","refs/heads/main"],
+                        capture_output=True,timeout=15,check=False)
+    require(main.returncode==0 and len(main.stdout)<180
+            and main.stdout.decode("ascii","strict").strip()==source+"\trefs/heads/main",
+            "PROTECTED_MAIN_MOVED_OR_UNAVAILABLE")
     api=HfApi(token=token)
     info=api.space_info(SPACE)
     require(info.sha==expected_hf and info.private is False, "HF_REVISION_MOVED_OR_PRIVATE")
@@ -41,6 +47,12 @@ def main():
     require(sdk in ("static","docker"), "HF_SPACE_SDK_UNEXPECTED")
     # No delete_patterns. Existing Space root HTML/CSS stays in its git history,
     # and rollback must be performed through the owner publisher, not by this script.
+    # No owner-publication identity movement is permissible, even after HF metadata read.
+    main_final=subprocess.run(["git","ls-remote","origin","refs/heads/main"],
+                              capture_output=True,timeout=15,check=False)
+    require(main_final.returncode==0 and len(main_final.stdout)<180
+            and main_final.stdout.decode("ascii","strict").strip()==source+"\trefs/heads/main",
+            "MAIN_MOVED_BEFORE_PROVIDER_COMMIT")
     result=api.upload_folder(
         folder_path=str(directory), path_in_repo="",
         repo_id=SPACE, repo_type="space", revision="main",
