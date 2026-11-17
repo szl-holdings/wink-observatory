@@ -60,3 +60,31 @@ jobs:
               assert client.get("/api/v1/build-info").json()["independent_runtime_verified"] is False
           print("OK: Python UI/ASGI, read-only API, truthful unavailable science")
           PY
+
+  public-source-readback:
+    runs-on: ubuntu-latest
+    needs: source-contracts
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.12"
+      - name: Live bounded anonymous HF dataset readback, exact immutable revision
+        run: |
+          python - <<'PY'
+          import json
+          from backend.live_data import fetch_public, summary
+          s=fetch_public()
+          e=summary(s)
+          assert s["source_state"]=="PUBLIC_DATASET_READBACK" and len(s["dataset_revision"])==40
+          assert e["wetlab_instrument_state"]=="NOT_CONNECTED"
+          assert not e["signature_verified"] and not e["independent_lab_verified"]
+          print(json.dumps({"result":"PUBLIC_SOURCE_OBSERVED","dataset_revision":s["dataset_revision"],
+                            "retrieved_at":s["retrieved_at"],
+                            "provider_snapshot_at":e["source_snapshot_at"],
+                            "producer_telemetry_state":e["producer_telemetry_state"],
+                            "direct_wetlab_source":False},sort_keys=True))
+          PY
