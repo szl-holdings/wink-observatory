@@ -2,8 +2,14 @@
 from __future__ import annotations
 
 import unittest
+from unittest import mock
+from types import ModuleType
+from pathlib import Path
+import json
+import tempfile
 
 from scripts import wink_public_runtime_watch as w
+from scripts import wink_browser_smoke as smoke
 
 MAIN = "b" * 40
 HF = "a" * 40
@@ -45,6 +51,54 @@ def browser(verified=False):
 
 
 class PublicRuntimeMonitorTests(unittest.TestCase):
+    def test_redirected_browser_reports_observed_origin_not_requested_origin(self):
+        # Exercise the actual browser adapter, not a prebuilt evidence dict.
+        # No browser installation, network, or page JavaScript is needed.
+        for final_url, response_url in (
+            ("https://unexpected.example/index.html", "https://unexpected.example/index.html"),
+            (smoke.PUBLIC, "https://unexpected.example/index.html"),
+        ):
+            with self.subTest(final_url=final_url, response_url=response_url):
+                api = ModuleType("playwright.sync_api")
+                api.TimeoutError = type("PlaywrightTimeoutError", (Exception,), {})
+                manager = mock.MagicMock()
+                api.sync_playwright = mock.Mock(return_value=manager)
+                browser_instance = manager.__enter__.return_value.chromium.launch.return_value
+                page = browser_instance.new_page.return_value
+                page.url = final_url
+                page.goto.return_value.status = 200
+                page.goto.return_value.url = response_url
+                with mock.patch.dict("sys.modules", {"playwright.sync_api": api}):
+                    result = smoke.observe("public")
+                self.assertEqual(result["state"], "UNEXPECTED_BROWSER_ORIGIN")
+                self.assertEqual(result["url"], final_url)
+                self.assertFalse(result["actual_browser_render_verified"])
+                page.evaluate.assert_not_called()
+                browser_instance.close.assert_called_once()
+                self.assertFalse(w.classify(result, transport())["public_client_boot_verified"])
+
+    def test_playwright_specific_error_retains_transport_and_failed_receipt(self):
+        error = type("PlaywrightError", (Exception,), {})
+        loader = mock.Mock(side_effect=[lambda: transport(),
+                                       mock.Mock(side_effect=error("private diagnostic"))])
+        with mock.patch.object(w, "_load", loader):
+            result = w.observe()
+        self.assertEqual(result["deployment_observation"], "INCOMPLETE_PUBLIC_OBSERVATION")
+        self.assertEqual(result["github_main_sha"], MAIN)
+        self.assertEqual(result["hf_revision"], HF)
+        self.assertEqual(result["browser_failure_type"], "PlaywrightError")
+        self.assertNotIn("private diagnostic", str(result))
+        self.assertEqual(result["release_admission"], "HOLD")
+
+        with tempfile.TemporaryDirectory() as folder:
+            dest = Path(folder) / "witness.json"
+            with mock.patch.object(w, "observe", return_value=result), \
+                 mock.patch("sys.argv", ["watch", "--output", str(dest)]), \
+                 mock.patch("builtins.print"):
+                self.assertEqual(w.main(), 2)
+            self.assertEqual(json.loads(dest.read_text())["browser_failure_type"],
+                             "PlaywrightError")
+
     def test_http_200_with_broken_javascript_is_observed_hold_not_green_production(self):
         record = w.classify(browser(), transport())
         self.assertTrue(record["public_static_http_reachable"])
