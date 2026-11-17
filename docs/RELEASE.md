@@ -192,3 +192,53 @@ Linux as packaged. It is not an actual Hugging Face deployment, its source
 declaration is not a signed runtime attestation, and it does not clear
 production/environment owner or scientific admission HOLDs. A separate
 HF canonical revision and live public HTTP witness is still mandatory.
+
+### Provable complete static rollback source (before future SDK migration)
+
+The original public WINK static Space at HF commit
+01e1021e7e1d80a0d4754fa01ca84282cb854c85 contains **exactly four
+reviewed tracked files**. A source-only independent readback on 2026-11-17
+at 07:48 UTC verified the immutable provider tree, sizes, and raw bytes.
+The entire public source snapshot (README, HTML, CSS and .gitattributes)
+is retained locally on the owner computer under
+C:\Users\steph\szl-cto\wink-public-rollback-20261117-raw, with
+manifest.json. This does NOT constitute a provider rollback or
+a production deployment.
+
+| Historical file | Bytes | SHA-256 |
+| --- | ---: | --- |
+| .gitattributes | 1,519 | 11ad7efa24975ee4b0c3c3a38ed18737f0658a5f75a0a96787b576a78a023361 |
+| README.md | 2,074 | ad920ec66340e578934e2c5aef3d534dcb5b4ba4c7bdbabb88f3889e523ea4f1 |
+| index.html | 19,994 | 9f4f5350fc223d0bed88bd017ff35fecf44f3410c1c5e55e802928d70f6e4a52 |
+| style.css | 388 | 789bfd541c9f06658ac410d968e9c39fa8c63a48a08643b36071b984c699a9f4 |
+
+The canonical GitHub SOURCE COMMIT
+190488e0c15e2c69cfe04681f23697e53b337b45 stores exactly the same
+19,994-byte blob for frontend/index.html as HF index.html. A Windows
+checkout may display 20,305 bytes because of CRLF translation; the
+source of truth is the exact immutable Git blob, not the working tree.
+This avoids false source-parity rejection from platform line endings.
+
+New source-owned prepublication gate:
+scripts/wink_rollback_snapshot.py confirms the expected current public
+HF revision and static SDK, enumerates the full pinned tree and refuses
+unexpected/missing files, checks each exact byte-length and SHA-256,
+compares HF index bytes with the pinned GitHub main blob, and only then
+stages the entire original static source plus JSON manifest.
+
+The sole manual publisher uploads that public, SHA-bound rollback archive
+to protected GitHub Actions artifacts **before any HF mutation**. The
+artifact uploader explicitly includes hidden files so the public
+.gitattributes file cannot be silently omitted. The publisher must fail
+before any provider commit if this archive cannot be independently
+materialized and uploaded. The archive is source evidence: it does NOT
+grant a valid owner maintenance window, authorize bills or training,
+automatically restore the old Space, or independently verify a running
+Python application. A rollback itself must still be a separate
+operator-authorized, exact-revision action.
+
+Once an HF Space switches to Docker, its file tree is no longer this
+static four-file baseline. The static rollback gate is intentionally
+one-time for the first SDK conversion; future Docker-to-Docker updates
+need a separately reviewed rollback contract rather than bypassing this
+strict static source identity.
