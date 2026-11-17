@@ -64,11 +64,17 @@ unlicensed scientific datasets, or confidential lab footage in public Spaces.
 - GitHub source main: bd9742da5d73a9c9f71f3d88e848b8cdbdc0fac8.
 - Public HF Space SZLHOLDINGS/wink-observatory repo revision:
   01e1021e7e1d80a0d4754fa01ca84282cb854c85; SDK static, provider stage
-  RUNNING, visibility public. The public Space origin returned GET / HTTP 404;
-  /index.html, /readyz, /api/v1/observatory and /api/v1/acceptance-audit also
-  returned HTTP 404. The source repository file at the immutable Hugging Face
-  resolve/main/index.html separately returned HTTP 200. A repository HTML
-  file is NOT proof of an operational frontend.
+  RUNNING, visibility public. An early check incorrectly used the
+  Docker/Gradio-form host szlholdings-wink-observatory.hf.space and observed
+  GET / and Python API HTTP 404. That proved only the Docker origin was
+  unavailable, NOT that the static site was broken. The Space's own
+  huggingface.co page names the real static origin:
+  https://szlholdings-wink-observatory.static.hf.space. Direct independent
+  HTTP checks verified GET / responds 302 -> /index.html, with /index.html
+  HTTP 200 and /style.css HTTP 200. The static HTML served at its origin
+  has host-added bytes and must NOT be presented as raw immutable Git
+  blob parity. The static frontend is publicly reachable while the
+  Python Docker backend is not deployed.
 - The Python application is in GitHub main, NOT in the static HF runtime.
   No main-to-HF module byte parity or independent runtime proof exists.
 - Fleet-data producer's last observed UTC snapshot is 2026-11-17 03:15 and

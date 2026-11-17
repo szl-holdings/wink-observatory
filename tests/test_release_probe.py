@@ -20,6 +20,8 @@ class IndependentReleaseProbeTests(unittest.TestCase):
         hf = {"id": w.SPACE, "private": False, "sha": space_sha or self.SPACE,
               "cardData": {"sdk": sdk}, "runtime": {"stage": stage}}
         results = {
+            w.STATIC_URL + "/index.html": w.Readback(200, sha256="1" * 64),
+            w.STATIC_URL + "/style.css": w.Readback(200, sha256="2" * 64),
             w.MAIN_URL: w.Readback(200, gh),
             w.SPACE_URL: w.Readback(200, hf),
             w.APP_URL + "/": w.Readback(root),
@@ -53,12 +55,35 @@ class IndependentReleaseProbeTests(unittest.TestCase):
         self.assertFalse(result["independent_runtime_verified"])
         self.assertFalse(result["owner_countersignatures_verified"])
 
-    def test_public_static_space_404_is_release_hold_even_when_provider_running(self):
+    def test_correct_static_frontend_is_public_even_when_docker_origin_404(self):
         result = w.observe(self.fake(root=404, sdk="static", ready=404))
-        self.assertEqual(result["http_get_statuses"]["/"], "404")
-        self.assertIn("PUBLIC_ROOT_NOT_HTTP_200", result["blockers"])
+        self.assertEqual(result["static_site_origin"], w.STATIC_URL)
+        self.assertEqual(result["static_http_get_statuses"]["/index.html"], "200")
+        self.assertEqual(result["static_http_get_statuses"]["/style.css"], "200")
+        self.assertTrue(result["static_frontend_reachable"])
+        self.assertEqual(result["static_frontend_state"], "PUBLIC_STATIC_UI_REACHABLE")
+        self.assertEqual(result["static_served_index_sha256"], "1" * 64)
+        self.assertFalse(result["static_source_byte_parity_independently_verified"])
+        self.assertEqual(result["http_get_statuses"]["/"], "404")  # Docker-form host
+        self.assertIn("PYTHON_DOCKER_ROOT_NOT_HTTP_200", result["blockers"])
+        self.assertNotIn("STATIC_FRONTEND_NOT_REACHABLE", result["blockers"])
         self.assertIn("HF_DOCKER_SDK_NOT_DEPLOYED", result["blockers"])
         self.assertEqual(result["deployment_state"], "HOLD")
+        self.assertEqual(result["release_admission"], "HOLD")
+
+    def test_static_html_missing_refuses_frontend_reachability(self):
+        result = w.observe(self.fake(
+            sdk="static", root=404, ready=404,
+            gone=(w.STATIC_URL + "/index.html",)))
+        self.assertFalse(result["static_frontend_reachable"])
+        self.assertEqual(result["static_frontend_state"], "STATIC_UI_NOT_CONFIRMED")
+        self.assertIn("STATIC_FRONTEND_NOT_REACHABLE", result["blockers"])
+
+    def test_docker_form_runtime_does_not_inherit_static_site_readiness(self):
+        result = w.observe(self.fake(sdk="docker"))
+        self.assertFalse(result["static_frontend_reachable"])
+        self.assertEqual(result["static_frontend_state"], "NOT_APPLICABLE_TO_DOCKER")
+        self.assertEqual(result["deployment_state"], "HTTP_REACHABLE_UNADMITTED")
 
     def test_main_mismatch_cannot_be_recast_as_green_pr_head(self):
         result = w.observe(self.fake(build_sha=self.OTHER))
@@ -127,6 +152,8 @@ class IndependentReleaseProbeTests(unittest.TestCase):
             w.get("https://huggingface.co/api/whoami-v2")
         with self.assertRaises(w.Unavailable):
             w.get(w.APP_URL + "/admin")
+        with self.assertRaises(w.Unavailable):
+            w.get(w.STATIC_URL + "/admin")
 
     def test_secret_shape_or_duplicate_keys_cannot_be_accepted(self):
         with self.assertRaises(w.Unavailable):

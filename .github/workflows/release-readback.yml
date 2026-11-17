@@ -36,8 +36,11 @@ jobs:
           import json, os
           from pathlib import Path
           report=json.loads((Path(os.environ['RUNNER_TEMP'])/'wink-public-release-readback.json').read_text())
-          fields=('github_main_sha','hf_space_revision','hf_sdk','deployment_state',
-                  'app_transport_state','telemetry_readiness','scientific_admission',
+          fields=('github_main_sha','hf_space_revision','hf_sdk',
+                  'static_site_origin','static_frontend_state',
+                  'static_http_get_statuses','docker_application_origin',
+                  'docker_root_http_200','deployment_state','app_transport_state',
+                  'telemetry_readiness','scientific_admission',
                   'independent_runtime_verified','release_admission')
           lines=['## WINK bounded public release witness','',
                  'Successful workflow = observation was performed, not a release.',
