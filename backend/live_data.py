@@ -47,6 +47,12 @@ def pairs(items):
 def nonfinite(_):
     raise SourceUnavailable("NONFINITE_NUMBER")
 
+def finite_float(value: str) -> float:
+    number=float(value)
+    if not math.isfinite(number):
+        raise SourceUnavailable("NONFINITE_NUMBER")
+    return number
+
 def get_json(url: str) -> dict:
     p = urlsplit(url)
     allowed = (
