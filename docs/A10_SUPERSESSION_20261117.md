@@ -34,3 +34,17 @@ proof that the archived code executed. The source-only correction does not deplo
 the Space, publish to the HF dataset, or notify any collaborator. Existing runtime
 and data consumers still need explicit reconciliation before their diagnosis can
 be called corrected.
+
+## Source consumer reconciliation
+
+The README, acceptance-arithmetic warnings, static baseline and static public-readback
+presentation now apply this source-review interpretation. They do not rewrite the
+archived diagnosis or historical public protocol/receipt JSON. The static renderer
+labels its correction and does not treat a remote ANSWERED label as an A10 closure.
+Raw source documents remain available unchanged for audit. The source revision of
+the application, not the HF dataset revision, owns this interpretation.
+
+This is a candidate-source change only. It does not correct the currently published
+HF HTML or HF dataset. Publication and independent public-runtime readback remain
+separate blocked gates. PR #14 owns browser/runtime diagnostics; no files from
+that PR are edited here.

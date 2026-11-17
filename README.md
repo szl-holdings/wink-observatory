@@ -40,7 +40,7 @@ Three stations, rendered in WebGL from public repository snapshots (freshness is
 | Space deployed | YES — static SDK, no server, no secrets client-side |
 | Witness series (Part D) | NOT STARTED — first observation falls at signature per D2 |
 | v5 held-out receipt | PUBLISHED WITH OPEN FINDINGS — A9 trippability audit open, A10 UNINTERPRETABLE |
-| Neutral-accuracy 0.05 figure | Measures letter-format compliance, not correctness — see data/receipts/a10-diagnosis.json |
+| Neutral-accuracy 0.05 figure | Parsed-option correctness conflates answer and formatting; low-score cause unknown, arms not established independent. Historical diagnosis superseded: [correction](docs/A10_SUPERSESSION_20261117.md) |
 | Protocol freeze | NONE — no deposit, no DOI, no freeze date asserted |
 
 ## Roadmap (proposed, not launched)
