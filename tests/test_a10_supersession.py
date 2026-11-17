@@ -24,6 +24,13 @@ class A10SupersessionTests(unittest.TestCase):
     def test_original_diagnosis_is_preserved_byte_exact(self):
         self.assertEqual(hashlib.sha256((RECEIPTS / 'a10-diagnosis.json').read_bytes()).hexdigest(), self.record['supersedes']['sha256'])
 
+    def test_historical_receipt_checkout_preserves_exact_bytes_cross_platform(self):
+        # Without explicit eol=lf, core.autocrlf converts LF to CRLF on Windows,
+        # making this byte-exact historical receipt appear corrupted.
+        lines = (ROOT / '.gitattributes').read_text(encoding='utf-8').splitlines()
+        self.assertIn('data/receipts/a10-diagnosis.json text eol=lf', lines)
+        self.assertIn('data/receipts/a10-diagnosis-supersession-20261117.json text eol=lf', lines)
+
     def test_lowercase_correct_option_scores(self):
         self.assertEqual(self.score('a'), (1.0, 1))
 
