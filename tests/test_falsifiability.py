@@ -28,6 +28,17 @@ class FalsifiabilityTests(unittest.TestCase):
         self.assertEqual(item["review_state"],"UNINTERPRETABLE")
         self.assertIsNone(item["mathematical_failure_witness"]["maximum_failing_success_count"])
 
+    def test_unstructured_a10_tolerance_is_bound_to_reviewed_literal(self):
+        report = a.audit(self.receipt)
+        item = next(x for x in report["findings"] if x["criterion"]=="criterion_4_neutral")
+        self.assertEqual(item["tolerance_source"], "REVIEWED_PUBLIC_RULE_LITERAL")
+        mutated = copy.deepcopy(self.receipt)
+        next(x for x in mutated["criteria"] if x["id"]=="criterion_4_neutral")["rule"] = (
+            "adapter neutral accuracy >= base neutral accuracy - 0.20"
+        )
+        with self.assertRaisesRegex(a.EvaluationUnavailable, "NEUTRAL_RULE_REVIEW_REQUIRED"):
+            a.audit(mutated)
+
     def test_invented_identifier_rule_requires_catastrophic_failure_count(self):
         r=a.audit(self.receipt)
         item=next(x for x in r["findings"] if x["criterion"]=="criterion_5_invented_id")
