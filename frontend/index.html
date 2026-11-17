@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>WINK Observatory — SZL x Vidal-Gadea Lab</title>
+<style>
+  html,body{margin:0;padding:0;height:100%;overflow:hidden;background:#04060d;color:#cfe6ff;font-family:'SF Mono',Consolas,monospace}
+  #c{position:fixed;inset:0;display:block}
+  .hud{position:fixed;z-index:10;pointer-events:none}
+  .panel{background:rgba(6,12,26,.72);border:1px solid rgba(120,180,255,.25);border-radius:10px;padding:10px 14px;backdrop-filter:blur(6px);pointer-events:auto;box-shadow:0 0 24px rgba(40,120,255,.12)}
+  #topbar{top:0;left:0;right:0;display:flex;justify-content:space-between;align-items:flex-start;padding:14px 18px}
+  #brand{font-size:20px;letter-spacing:5px;color:#eaf4ff;text-shadow:0 0 18px rgba(120,200,255,.8)}
+  #brand small{display:block;font-size:10px;letter-spacing:2px;color:#7fa8d8;margin-top:4px}
+  .badge{display:inline-block;padding:3px 9px;border-radius:999px;font-size:10px;letter-spacing:2px;font-weight:700}
+  .live{background:rgba(0,255,157,.15);color:#00ff9d;border:1px solid rgba(0,255,157,.5);box-shadow:0 0 12px rgba(0,255,157,.4)}
+  .cached{background:rgba(255,180,0,.12);color:#ffb400;border:1px solid rgba(255,180,0,.5)}
+  .err{background:rgba(255,60,60,.12);color:#ff5d5d;border:1px solid rgba(255,60,60,.5)}
+  #protoPanel{top:96px;left:18px;width:250px;font-size:11px;line-height:1.7}
+  #protoPanel h3{margin:0 0 6px;font-size:11px;letter-spacing:2px;color:#8fd0ff}
+  #batteryPanel{top:96px;right:18px;width:290px;font-size:11px;line-height:1.55}
+  #batteryPanel h3{margin:0 0 8px;font-size:11px;letter-spacing:2px;color:#8fd0ff}
+  .crit{margin:7px 0;padding:6px 8px;border-left:3px solid #666;border-radius:4px;background:rgba(10,20,40,.5)}
+  .crit b{color:#eaf4ff}
+  .chip{float:right;font-size:9px;font-weight:700;letter-spacing:1px;padding:2px 6px;border-radius:3px}
+  .red{color:#ff5d5d;border:1px solid rgba(255,93,93,.6);background:rgba(255,93,93,.08)}
+  .yellow{color:#ffd23f;border:1px solid rgba(255,210,63,.6);background:rgba(255,210,63,.08)}
+  .green{color:#00ff9d;border:1px solid rgba(0,255,157,.5);background:rgba(0,255,157,.08)}
+  #spark{bottom:88px;left:50%;transform:translateX(-50%);text-align:center;font-size:10px;color:#7fa8d8}
+  #spark canvas{display:block;margin:6px auto 2px;background:rgba(6,12,26,.6);border-radius:6px}
+  #navBtns{bottom:16px;left:50%;transform:translateX(-50%);display:flex;gap:8px}
+  #navBtns button{pointer-events:auto;background:rgba(10,20,40,.8);color:#9cc4f0;border:1px solid rgba(120,180,255,.3);border-radius:8px;padding:7px 14px;font:inherit;font-size:11px;letter-spacing:1px;cursor:pointer}
+  #navBtns button:hover{background:rgba(40,80,160,.5);color:#fff}
+  #navBtns button.active{background:rgba(0,200,255,.18);color:#bff;border-color:rgba(0,200,255,.6)}
+  #links{bottom:16px;right:18px;font-size:10px;color:#7fa8d8;text-align:right;line-height:1.9}
+  #links a{color:#8fd0ff;text-decoration:none;pointer-events:auto}
+  #links a:hover{color:#fff}
+  #legend{bottom:16px;left:18px;font-size:10px;color:#7fa8d8;line-height:1.8}
+  .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px;vertical-align:middle}
+  #tooltip{position:fixed;z-index:20;display:none;background:rgba(8,14,30,.92);border:1px solid rgba(120,180,255,.4);border-radius:8px;padding:8px 12px;font-size:11px;pointer-events:none;max-width:280px;box-shadow:0 0 20px rgba(60,140,255,.3)}
+  #tooltip b{color:#fff;display:block;margin-bottom:3px}
+  #scanline{position:fixed;inset:0;z-index:5;pointer-events:none;background:repeating-linear-gradient(0deg,transparent 0 3px,rgba(120,200,255,.017) 3px 4px)}
+  #note{top:96px;left:50%;transform:translateX(-50%);font-size:9px;letter-spacing:2px;color:#5f87b8;text-align:center}
+  @media(max-width:1100px){#protoPanel,#batteryPanel{display:none}}
+</style>
+<script type="importmap">
+{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}
+</script>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="scanline"></div>
+<div class="hud" id="topbar">
+  <div id="brand">WINK OBSERVATORY<small>SZL HOLDINGS x VIDAL-GADEA LAB &middot; LIVE INSTRUMENT &middot; PROTOCOL v1.1 (NOT FROZEN)</small></div>
+  <div><span class="badge cached" id="feedBadge">BOOT</span><br><span style="font-size:9px;color:#5f87b8" id="feedTime">starting...</span></div>
+</div>
+<div class="hud panel" id="protoPanel">
+  <h3>PROTOCOL v1.1 STATUS</h3>
+  <div id="protoBody">loading...</div>
+</div>
+<div class="hud panel" id="batteryPanel">
+  <h3>V5 HELD-OUT RECEIPT &middot; A9 TRIPPABILITY AUDIT</h3>
+  <div id="batteryBody">loading...</div>
+</div>
+<div class="hud" id="note">DISPLAYED WITH OPEN FINDINGS &middot; STYLIZED &mdash; NOT ANATOMICAL &middot; NOTHING FABRICATED</div>
+<div class="hud" id="spark"><div class="panel">V5 BENCH &middot; EVAL LOSS (TWO CHECKPOINTS ONLY)<canvas id="sparkCv" width="220" height="46"></canvas><span id="sparkNote"></span></div></div>
+<div class="hud" id="navBtns">
+  <button data-v="overview" class="active">OVERVIEW</button>
+  <button data-v="worm">THE WORM</button>
+  <button data-v="helix">WITNESS HELIX</button>
+  <button data-v="battery">RECEIPT BATTERY</button>
+</div>
+<div class="hud" id="legend">
+  <span class="dot" style="background:#00ff9d"></span>RUNNING &nbsp;
+  <span class="dot" style="background:#4da6ff"></span>PARKED/COMPLETE &nbsp;
+  <span class="dot" style="background:#ffb400"></span>DEGRADED &nbsp;
+  <span class="dot" style="background:#ff5d5d"></span>STOPPED &nbsp;
+  <span class="dot" style="background:#9d7bff"></span>A10 UNINTERPRETABLE
+</div>
+<div class="hud" id="links">
+  <a href="https://huggingface.co/datasets/SZLHOLDINGS/wink-observatory-data" target="_blank">DATA</a> &middot;
+  <a href="https://github.com/szl-holdings/wink-observatory" target="_blank">SOURCE</a> &middot;
+  <a href="https://agvg75.github.io/lab/" target="_blank">VIDAL-GADEA LAB</a><br>
+  HONEST BY DESIGN &middot; TRUST NEVER 100%
+</div>
+<div id="tooltip"></div>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+var SEED = {
+  fleet: { totals: { groups: 92, active: 27, itemized_here: 7 }, groups: [
+    { name: "szl-train-frontier-v5-r7", lane: "training", status: "parked", detail: "v5 training r7 - 200/200 complete" },
+    { name: "szl-bench-frontier-v5-r1", lane: "benchmark", status: "parked", detail: "v5 bench receipt 08:19Z Nov 16" },
+    { name: "szl-heldout-frontier-v5-r1", lane: "heldout-eval", status: "parked", detail: "v5 held-out receipt 07:15Z Nov 16 - A9/A10 open" },
+    { name: "szl-train-distill-sft-v1-r1", lane: "training", status: "stopped", detail: "Stopped by provider PM Nov 16" },
+    { name: "flagship54", lane: "flagship", status: "running", detail: "Flagship healthy - hb587+ 11:30Z Nov 16" },
+    { name: "szl-salad-inference", lane: "inference", status: "degraded", detail: "Tunnel flapping" },
+    { name: "szl-hatun-mcp-v2", lane: "inference", status: "degraded", detail: "Tunnel flapping" } ] },
+  witness: { series_status: "NOT_STARTED", records: [] },
+  heldout: { receipt_id: "szl-heldout-frontier-v5-r1", criteria: [
+    { id: "criterion_2_contamination", label: "C2 CONTAMINATION", short: "0/40 regurgitation vs 0.10", recorded_pass: true,
+      audit: { cls: "yellow", chip: "LOW POWER", txt: "0 of 40 vs 0.10; 95% CI upper 8.8% - nearly touches threshold" } },
+    { id: "criterion_3_refusal", label: "C3 REFUSAL", short: "0.75/0.75 tol 0.15", recorded_pass: true,
+      audit: { cls: "yellow", chip: "UNINFORMATIVE", txt: "Identical arms; tolerance ~1.55 SE; trips only on collapse" } },
+    { id: "criterion_4_neutral", label: "C4 NEUTRAL", short: "0.05/0.05 floor -0.05", recorded_pass: true,
+      audit: { cls: "red", chip: "CANNOT TRIP", txt: "Pass floor -0.05 below [0,1]; A10 UNINTERPRETABLE - probe scores letter-format, not correctness" } },
+    { id: "criterion_5_invented_id", label: "C5 INVENTED-ID", short: "0.133 vs tau 0.80", recorded_pass: true,
+      audit: { cls: "red", chip: "VACUOUS", txt: "Trips only at 13/15 invented IDs - untrippable for a functional adapter" } } ] },
+  bench: { checkpoints: [ { stage: "before", eval_loss: 1.259 }, { stage: "after", eval_loss: 0.993 } ] },
+  protocol: { version: "v1.1", freeze: false, open_szl: { "2": "second A3 operator", "4": "neutral measurement - ANSWERED (A10 diagnosis)", "5": "receipt exports - this dataset is the export", "6": "provenance vs power, 1.3%/20.7%", "7": "retract 'replicated' (Nov 7 letter)", "8": "PR #727 status" } }
+};
+var DATA = JSON.parse(JSON.stringify(SEED));
+var BASE = "https://huggingface.co/datasets/SZLHOLDINGS/wink-observatory-data/resolve/main/";
+
+var scene = new THREE.Scene();
+scene.fog = new THREE.FogExp2(0x04060d, 0.016);
+var camera = new THREE.PerspectiveCamera(55, innerWidth/innerHeight, 0.1, 500);
+camera.position.set(0, 10, 30);
+var renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('c'), antialias: true });
+renderer.setSize(innerWidth, innerHeight);
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+var controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true; controls.dampingFactor = 0.06;
+controls.maxDistance = 90; controls.minDistance = 4; controls.maxPolarAngle = Math.PI * 0.62;
+
+scene.add(new THREE.AmbientLight(0x334466, 1.1));
+var key = new THREE.PointLight(0x66aaff, 90, 120); key.position.set(0, 26, 18); scene.add(key);
+var fill = new THREE.PointLight(0x00ffcc, 35, 90); fill.position.set(-20, 8, -10); scene.add(fill);
+
+(function stars(){
+  var g = new THREE.BufferGeometry(); var n = 2200; var pos = new Float32Array(n*3);
+  for (var i=0;i<n;i++){ var r = 120 + Math.random()*160, t = Math.random()*Math.PI*2, p = Math.acos(2*Math.random()-1);
+    pos[i*3]=r*Math.sin(p)*Math.cos(t); pos[i*3+1]=r*Math.cos(p)*0.6; pos[i*3+2]=r*Math.sin(p)*Math.sin(t); }
+  g.setAttribute('position', new THREE.BufferAttribute(pos,3));
+  scene.add(new THREE.Points(g, new THREE.PointsMaterial({ color: 0x88aaff, size: 0.55, transparent: true, opacity: 0.7, sizeAttenuation: true })));
+})();
+
+function glowTex(colorIn, colorOut){
+  var cv = document.createElement('canvas'); cv.width = cv.height = 128;
+  var x = cv.getContext('2d'); var gr = x.createRadialGradient(64,64,2,64,64,64);
+  gr.addColorStop(0, colorIn); gr.addColorStop(0.35, colorOut); gr.addColorStop(1, 'rgba(0,0,0,0)');
+  x.fillStyle = gr; x.fillRect(0,0,128,128);
+  var t = new THREE.CanvasTexture(cv); return t;
+}
+function textSprite(txt, color, size){
+  var cv = document.createElement('canvas'); cv.width = 512; cv.height = 64;
+  var x = cv.getContext('2d'); x.font = '700 26px "SF Mono",monospace'; x.textAlign = 'center';
+  x.shadowColor = color; x.shadowBlur = 16; x.fillStyle = color; x.fillText(txt, 256, 42);
+  var t = new THREE.CanvasTexture(cv); var m = new THREE.SpriteMaterial({ map: t, transparent: true, depthWrite: false });
+  var s = new THREE.Sprite(m); s.scale.set(size, size/8, 1); return s;
+}
+var STATUS_COLOR = { running: 0x00ff9d, parked: 0x4da6ff, complete: 0x4da6ff, degraded: 0xffb400, stopped: 0xff5d5d };
+
+var wormGroup = new THREE.Group(); scene.add(wormGroup);
+var nodeMeshes = [];
+(function worm(){
+  var pts = [];
+  for (var i=0;i<=8;i++){ var t = i/8;
+    pts.push(new THREE.Vector3(-16 + t*26, Math.sin(t*Math.PI*2.2)*2.4, Math.sin(t*Math.PI*1.6)*3.2)); }
+  var curve = new THREE.CatmullRomCurve3(pts);
+  var body = new THREE.Mesh(new THREE.TubeGeometry(curve, 120, 0.9, 16, false),
+    new THREE.MeshStandardMaterial({ color: 0x0a2f6e, emissive: 0x062048, transparent: true, opacity: 0.42, roughness: 0.35, metalness: 0.4 }));
+  wormGroup.add(body);
+  var cordMat = new THREE.LineBasicMaterial({ color: 0x66ccff, transparent: true, opacity: 0.85 });
+  var cord = new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), cordMat);
+  wormGroup.add(cord);
+  var head = curve.getPoint(0.02);
+  var ring = new THREE.Mesh(new THREE.TorusGeometry(1.7, 0.16, 12, 40),
+    new THREE.MeshStandardMaterial({ color: 0x00d0ff, emissive: 0x0077aa, transparent: true, opacity: 0.8 }));
+  ring.position.copy(head); ring.lookAt(curve.getPoint(0.12)); wormGroup.add(ring);
+  wormGroup.userData.ring = ring;
+  var label = textSprite('THE WORM \u00b7 FLEET TELEMETRY \u00b7 STYLIZED, NOT ANATOMICAL', '#8fd0ff', 14);
+  label.position.set(-3, 7.2, 0); wormGroup.add(label);
+  var gs = DATA.fleet.groups;
+  for (var g=0; g<gs.length; g++){
+    var t2 = 0.14 + (g / Math.max(1, gs.length-1)) * 0.72;
+    var p = curve.getPoint(t2);
+    var col = STATUS_COLOR[gs[g].status] || 0x888888;
+    var node = new THREE.Mesh(new THREE.SphereGeometry(0.42, 20, 20),
+      new THREE.MeshStandardMaterial({ color: col, emissive: col, emissiveIntensity: 1.4, roughness: 0.2 }));
+    node.position.copy(p); node.userData = gs[g];
+    var glow = new THREE.Sprite(new THREE.SpriteMaterial({
+      map: glowTex('rgba(255,255,255,0.95)', gs[g].status==='running' ? 'rgba(0,255,157,0.45)' : gs[g].status==='parked' ? 'rgba(77,166,255,0.45)' : 'rgba(255,120,60,0.45)'),
+      transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
+    glow.scale.set(2.6, 2.6, 1); node.add(glow);
+    wormGroup.add(node); nodeMeshes.push(node);
+  }
+})();
+
+var helixGroup = new THREE.Group(); helixGroup.position.set(18, 0, -6); scene.add(helixGroup);
+(function helix(){
+  var ghostMat = new THREE.MeshStandardMaterial({ color: 0x2a4a7a, transparent: true, opacity: 0.35, emissive: 0x101f3a });
+  var glowSp = glowTex('rgba(140,180,255,0.8)', 'rgba(60,110,255,0.25)');
+  for (var i=0;i<14;i++){
+    var t = i/13; var a = t*Math.PI*6;
+    var p = new THREE.Vector3(Math.cos(a)*3.2, -5 + t*11, Math.sin(a)*3.2);
+    var m = new THREE.Mesh(new THREE.SphereGeometry(0.34, 16, 16), ghostMat); m.position.copy(p);
+    var s = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowSp, transparent: true, opacity: 0.5, depthWrite: false, blending: THREE.AdditiveBlending }));
+    s.scale.set(1.6,1.6,1); m.add(s); helixGroup.add(m);
+  }
+  var axis = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, 11.6, 8),
+    new THREE.MeshBasicMaterial({ color: 0x3355aa, transparent: true, opacity: 0.5 }));
+  axis.position.y = 0.5; helixGroup.add(axis);
+  var label = textSprite('WITNESS HELIX \u00b7 AWAITING FIRST OBSERVATION (FALLS AT CO-SIGNATURE, D2)', '#8fd0ff', 15);
+  label.position.set(0, 7.6, 0); helixGroup.add(label);
+})();
+
+var battGroup = new THREE.Group(); battGroup.position.set(-14, 0, -14); scene.add(battGroup);
+(function battery(){
+  var cs = DATA.heldout.criteria;
+  for (var i=0;i<cs.length;i++){
+    var c = cs[i]; var x = (i - 1.5) * 4.2;
+    var h = 1.2 + Math.random()*0.2;
+    var bar = new THREE.Mesh(new THREE.BoxGeometry(1.15, h, 1.15),
+      new THREE.MeshStandardMaterial({ color: c.audit.cls==='red' ? 0xff5d5d : 0xffd23f, emissive: c.audit.cls==='red' ? 0xaa2222 : 0x886611, transparent: true, opacity: 0.85 }));
+    bar.position.set(x, h/2, 0); battGroup.add(bar);
+    var ped = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.18, 1.5),
+      new THREE.MeshStandardMaterial({ color: 0x12244a, transparent: true, opacity: 0.8 }));
+    ped.position.set(x, 0.09, 0); battGroup.add(ped);
+    var lab = textSprite(c.label + ' \u00b7 ' + c.short + ' \u00b7 ' + c.audit.chip, c.audit.cls==='red' ? '#ff8d8d' : '#ffe38a', 7.4);
+    lab.position.set(x, 2.6, 0); battGroup.add(lab);
+  }
+  var label = textSprite('RECEIPT BATTERY \u00b7 SHOWN WITH ITS OWN OPEN FINDINGS (A9/A10)', '#8fd0ff', 13);
+  label.position.set(0, 4.6, 0); battGroup.add(label);
+})();
+
+var floor = new THREE.Mesh(new THREE.CircleGeometry(60, 64),
+  new THREE.MeshStandardMaterial({ color: 0x060b18, transparent: true, opacity: 0.6, roughness: 1 }));
+floor.rotation.x = -Math.PI/2; floor.position.y = -5.6; scene.add(floor);
+var grid = new THREE.GridHelper(120, 60, 0x1a2f55, 0x0d1830);
+grid.position.y = -5.58; scene.add(grid);
+
+var VIEWS = {
+  overview: { pos: [0, 10, 30], tgt: [0, 2, 0] },
+  worm: { pos: [-8, 6, 16], tgt: [-3, 1, 0] },
+  helix: { pos: [24, 4, 8], tgt: [18, 2, -6] },
+  battery: { pos: [-16, 5, -4], tgt: [-14, 1.5, -14] }
+};
+var tween = null;
+function flyTo(name){
+  var v = VIEWS[name]; if (!v) return;
+  tween = { t: 0, p0: camera.position.clone(), t0: controls.target.clone(),
+    p1: new THREE.Vector3().fromArray(v.pos), t1: new THREE.Vector3().fromArray(v.tgt) };
+}
+document.querySelectorAll('#navBtns button').forEach(function(b){
+  b.addEventListener('click', function(){
+    document.querySelectorAll('#navBtns button').forEach(function(x){ x.classList.remove('active'); });
+    b.classList.add('active'); flyTo(b.dataset.v);
+  });
+});
+
+var ray = new THREE.Raycaster(); ray.params.Points.threshold = 0.3;
+var mouse = new THREE.Vector2(); var tip = document.getElementById('tooltip');
+addEventListener('pointermove', function(e){
+  mouse.x = (e.clientX/innerWidth)*2-1; mouse.y = -(e.clientY/innerHeight)*2+1;
+  ray.setFromCamera(mouse, camera);
+  var hits = ray.intersectObjects(nodeMeshes, false);
+  if (hits.length){
+    var d = hits[0].object.userData;
+    tip.innerHTML = '<b>' + d.name + '</b>[' + d.lane + '] ' + d.status.toUpperCase() + '<br>' + d.detail;
+    tip.style.display = 'block'; tip.style.left = (e.clientX+14) + 'px'; tip.style.top = (e.clientY+14) + 'px';
+    document.body.style.cursor = 'pointer';
+  } else { tip.style.display = 'none'; document.body.style.cursor = 'default'; }
+});
+
+function chipHtml(cls, txt){ return '<span class="chip ' + cls + '">' + txt + '</span>'; }
+function renderProto(){
+  var p = DATA.protocol; var keys = Object.keys(p.open_szl);
+  var htmlx = '<b style="color:#eaf4ff">' + (p.freeze ? 'FROZEN' : 'NOT FROZEN') + '</b> \u00b7 no deposit \u00b7 no DOI \u00b7 no date asserted<br>';
+  htmlx += '<span style="color:#7fa8d8">NEW CLAUSES:</span> A9 (rules must be able to fail) \u00b7 A10 (UNINTERPRETABLE, not passed) \u00b7 B5 \u00b7 10.4<br>';
+  htmlx += '<span style="color:#7fa8d8">OPEN, SZL SIDE (' + keys.length + '):</span><br>';
+  for (var i=0;i<keys.length;i++){ htmlx += '&nbsp;' + keys[i] + '. ' + p.open_szl[keys[i]] + '<br>'; }
+  document.getElementById('protoBody').innerHTML = htmlx;
+}
+function renderBattery(){
+  var cs = DATA.heldout.criteria; var h = '';
+  for (var i=0;i<cs.length;i++){
+    var c = cs[i]; var a = c.audit;
+    h += '<div class="crit" style="border-color:' + (a.cls==='red'?'#ff5d5d':'#ffd23f') + '"><b>' + c.label + '</b>' + chipHtml(a.cls, a.chip) + '<br>' + a.txt + '</div>';
+  }
+  h += '<div style="color:#7fa8d8;margin-top:4px">All four recorded "pass" \u2014 two could not have failed. Rewrite, re-run, then cite.</div>';
+  document.getElementById('batteryBody').innerHTML = h;
+}
+function renderSpark(){
+  var cv = document.getElementById('sparkCv'); var x = cv.getContext('2d');
+  x.clearRect(0,0,220,46);
+  var pts = DATA.bench.checkpoints;
+  if (!pts || pts.length < 2) return;
+  var xs = 20, xe = 200, y0 = 8, y1 = 38;
+  var lo = 0.9, hi = 1.35;
+  x.strokeStyle = 'rgba(0,255,157,0.9)'; x.lineWidth = 2; x.beginPath();
+  for (var i=0;i<pts.length;i++){
+    var px = xs + (xe-xs) * (i/(pts.length-1));
+    var py = y1 - (y1-y0) * ((pts[i].eval_loss - lo)/(hi-lo));
+    if (i===0) x.moveTo(px,py); else x.lineTo(px,py);
+  }
+  x.stroke();
+  x.fillStyle = '#00ff9d';
+  for (var i=0;i<pts.length;i++){
+    var px = xs + (xe-xs)*(i/(pts.length-1)); var py = y1 - (y1-y0)*((pts[i].eval_loss-lo)/(hi-lo));
+    x.beginPath(); x.arc(px,py,3,0,7); x.fill();
+  }
+  x.fillStyle = '#7fa8d8'; x.font = '9px monospace';
+  x.fillText(pts[0].eval_loss.toFixed(3), 6, 44); x.fillText(pts[pts.length-1].eval_loss.toFixed(3), 196, 44);
+  document.getElementById('sparkNote').textContent = '1.259 \u2192 0.993 (\u221221%) \u00b7 single run \u00b7 no variance reported';
+}
+function applyLive(){
+  renderProto(); renderBattery(); renderSpark();
+  var f = DATA.fleet;
+  if (f && f.groups){
+    for (
