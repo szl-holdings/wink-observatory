@@ -29,6 +29,24 @@ class ReleaseTopologyTests(unittest.TestCase):
         self.assertIn("python -I -B scripts/wink_release_probe.py", workflow)
         self.assertIn("--strict-transport", workflow)
 
+    def test_before_publisher_has_complete_immutable_static_rollback_archive(self):
+        workflow = OWNER.read_text(encoding="utf-8")
+        preflight = workflow.index("scripts/wink_rollback_snapshot.py")
+        archive = workflow.index("name: wink-public-static-rollback-")
+        publisher = workflow.index("python -I -B scripts/publish_hf_python.py")
+        self.assertLess(preflight, archive)
+        self.assertLess(archive, publisher)
+        self.assertIn("if-no-files-found: error", workflow)
+        self.assertIn("include-hidden-files: true", workflow)
+        self.assertIn("--source-sha", workflow)
+        self.assertIn("--hf-sha", workflow)
+        source = (ROOT / "scripts/wink_rollback_snapshot.py").read_text(encoding="utf-8")
+        self.assertNotIn("HF_TOKEN", source)
+        self.assertNotIn("upload_folder", source)
+        self.assertNotIn("request_hardware", source)
+        self.assertIn("PUBLIC_HF_TREE_INCOMPLETE_OR_UNREVIEWED", source)
+        self.assertIn("GITHUB_STATIC_MIRROR_NOT_BYTE_PARITY", source)
+
     def test_publisher_enforces_provider_cas_main_lease_and_no_direct_gpu_action(self):
         source = PUB.read_text(encoding="utf-8")
         self.assertIn("EXPECTED_MAIN_SHA", source)
