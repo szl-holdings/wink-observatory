@@ -118,3 +118,21 @@ runtime boot witness, and owner and scientific evidence all qualify.
 Source SHA, HF repo revision, raw HTML existence, app HTTP GET, telemetry age,
 owner authority, signed evidence, GPU execution and scientific validity are
 different observables; never substitute a PR-head green check for any of them.
+
+### Current owner credential / provider plan readback (2026-11-17)
+
+The authenticated Hugging Face connection reports SZLHOLDINGS as a **Team**
+organization with administrator membership. This satisfies the broad
+organization-plan classification for Docker compute Spaces; it does **not**
+authorize an SDK migration, compute allocation, subscription change, or a
+specific deployment window. Do not advertise a released Python HF runtime.
+
+A read-only GitHub Actions secret-*name* inventory found **no HF_TOKEN
+configured** at the repository level or in the protected
+hf-wink-production environment. No credential value was read, copied,
+logged, rotated or supplied. The existing manual source-owned publisher
+will stop at HF_TOKEN_NOT_CONFIGURED until the owner provisions an
+appropriately scoped credential through an approved GitHub environment
+secret channel. Never paste a token into a chat or commit it to GitHub.
+The repository environment reviewer must separately approve deployment;
+a registered secret is never itself permission to deploy.
