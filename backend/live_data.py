@@ -165,7 +165,8 @@ def mirror() -> dict:
         if not file.is_file() or file.stat().st_size > MAX_BYTES:
             raise SourceUnavailable("PACKAGED_MIRROR_MISSING")
         docs[key] = json.loads(file.read_text(encoding="utf-8"),
-                               object_pairs_hook=pairs, parse_constant=nonfinite)
+                               object_pairs_hook=pairs, parse_constant=nonfinite,
+                               parse_float=finite_float)
     validate(docs)
     return {"source_state": "OFFLINE_PACKAGED_MIRROR", "source_kind": "PACKAGED_REPOSITORY",
             "dataset_revision": None, "retrieved_at": None,
