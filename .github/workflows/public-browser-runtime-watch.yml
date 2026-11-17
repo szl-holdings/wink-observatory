@@ -63,7 +63,11 @@ jobs:
               fields=("github_main_sha","hf_revision","hf_sdk",
                       "public_static_http_reachable","deployment_observation",
                       "browser_badge","browser_feed_detail",
-                      "public_client_boot_verified","release_admission")
+                      "public_client_boot_verified",
+                      "public_itemized_node_count_verified",
+                      "public_itemized_node_count",
+                      "public_itemized_node_count_state",
+                      "release_admission")
               lines += ["| State | Observed |", "| --- | --- |"]
               for key in fields:
                   lines.append("| "+key+" | "+str(r.get(key)).replace("|","/")+" |")
