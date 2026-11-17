@@ -26,10 +26,17 @@ decision-makers through a live 3D observational metaphor and accessible views.
 - Strict checksum/chain validation and native GitHub Actions tests.
 - Non-root Docker candidate and a manual, expected-revision HF publisher.
 
-**Do not present the candidate as the presently deployed Python Space.**
-The public Space was last observed RUNNING on static SDK. Docker admission,
-an HF organization plan/SDK transition, owner-reviewed rollback and independent
-public build readback are separate gates.
+**The public static demo is HTTP reachable; the Python candidate is not deployed.**
+Hugging Face's actual static-SDK origin
+[szlholdings-wink-observatory.static.hf.space](https://szlholdings-wink-observatory.static.hf.space/index.html)
+served GET /index.html HTTP 200 and its stylesheet HTTP 200. The public root
+redirects to /index.html. The alternate Docker-form host (without '.static')
+returns HTTP 404 because the Python/Docker backend has not been released.
+A prior report accidentally tested only that wrong host; it must not be
+repeated as a static frontend outage. Docker admission, owner-approved
+SDK transition, verified rollback, and independent API/source/runtime readback
+remain separate gates. The visible fleet telemetry is a dated public snapshot,
+not a live wet-lab experiment.
 
 ## What is not claimed
 

@@ -4,12 +4,14 @@
 **A 3D research evidence instrument for the proposed SZL Holdings and Vidal-Gadea Lab evaluation protocol (v1.1, not frozen).**
 
 Open it: **[WINK Observatory Space](https://huggingface.co/spaces/SZLHOLDINGS/wink-observatory)** ·
+**Verified public static frontend HTTP endpoint:** [WINK interactive 3D experience](https://szlholdings-wink-observatory.static.hf.space/index.html) (GET 200 on Nov 17). The static site is **not** the unlaunched Python/Docker research backend; the published fleet snapshot may be stale.
+
 Live data: **[wink-observatory-data](https://huggingface.co/datasets/SZLHOLDINGS/wink-observatory-data)** ·
 Lab: **[Vidal-Gadea Lab](https://agvg75.github.io/lab/)**
 
 ## What it is
 
-Three stations, rendered live in WebGL:
+Three stations, rendered in WebGL from public repository snapshots (freshness is separate and may be STALE):
 
 1. **The Worm** — estate fleet telemetry as a stylized *C. elegans* (the lab's
    model organism). Named groups are nodes on the ventral cord, colored by

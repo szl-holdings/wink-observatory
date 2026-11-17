@@ -23,12 +23,15 @@ REPO = "szl-holdings/wink-observatory"
 SPACE = "SZLHOLDINGS/wink-observatory"
 MAIN_URL = "https://api.github.com/repos/" + REPO + "/git/ref/heads/main"
 SPACE_URL = "https://huggingface.co/api/spaces/" + SPACE
-APP_URL = "https://szlholdings-wink-observatory.hf.space"
+APP_URL = "https://szlholdings-wink-observatory.hf.space"  # Docker origin only
+STATIC_URL = "https://szlholdings-wink-observatory.static.hf.space"
+STATIC_ROUTES = ("/index.html", "/style.css")  # static root redirects to index
 ROUTES = ("/", "/healthz", "/readyz", "/api/v1/build-info",
           "/api/v1/observatory", "/api/v1/acceptance-audit")
 SHA40 = re.compile(r"[a-f0-9]{40}\Z")
 MAX_BODY = 131072
-FIXED = {MAIN_URL, SPACE_URL, *(APP_URL + p for p in ROUTES)}
+FIXED = {MAIN_URL, SPACE_URL, *(APP_URL + p for p in ROUTES),
+         *(STATIC_URL + p for p in STATIC_ROUTES)}
 JSON_ROUTES = {MAIN_URL, SPACE_URL, *(APP_URL + p for p in ROUTES if p != "/")}
 
 
@@ -108,7 +111,8 @@ def _http_status(value: Readback) -> str:
 
 def observe(fetch=get) -> dict:
     """A transport/source readback is not an approval, signature, or scientific pass."""
-    checks = [MAIN_URL, SPACE_URL, *(APP_URL + p for p in ROUTES)]
+    checks = [MAIN_URL, SPACE_URL, *(APP_URL + p for p in ROUTES),
+              *(STATIC_URL + p for p in STATIC_ROUTES)]
     data = {}
     for url in checks:
         try:
@@ -136,6 +140,10 @@ def observe(fetch=get) -> dict:
         sdk = card.get("sdk") if isinstance(card, dict) else None
         stage = runtime.get("stage") if isinstance(runtime, dict) else None
     routes = {path: _http_status(data[APP_URL + path]) for path in ROUTES}
+    static_routes = {path: _http_status(data[STATIC_URL + path])
+                     for path in STATIC_ROUTES}
+    static_serving = (sdk == "static"
+                      and all(static_routes[path] == "200" for path in STATIC_ROUTES))
     build = data[APP_URL + "/api/v1/build-info"]
     declared = build.payload.get("declared_source_revision") if isinstance(build.payload, dict) else None
     telemetry = data[APP_URL + "/api/v1/observatory"]
@@ -162,10 +170,11 @@ def observe(fetch=get) -> dict:
     if space_sha is None: blockers.append("HF_SPACE_REVISION_UNAVAILABLE")
     if sdk != "docker": blockers.append("HF_DOCKER_SDK_NOT_DEPLOYED")
     if stage != "RUNNING": blockers.append("HF_RUNTIME_NOT_RUNNING")
-    if not http_root: blockers.append("PUBLIC_ROOT_NOT_HTTP_200")
+    if sdk == "static" and not static_serving: blockers.append("STATIC_FRONTEND_NOT_REACHABLE")
+    if not http_root: blockers.append("PYTHON_DOCKER_ROOT_NOT_HTTP_200")
     for p in ROUTES[1:]:
         if routes[p] != "200":
-            blockers.append("ROUTE_UNAVAILABLE:" + p + ":HTTP_" + routes[p])
+            blockers.append("DOCKER_ROUTE_UNAVAILABLE:" + p + ":HTTP_" + routes[p])
     if not declared_source_match: blockers.append("DEPLOYED_BUILD_SOURCE_NOT_EQUAL_MAIN")
     if not code_valid: blockers.append("SCIENTIFIC_GATE_REPORT_UNAVAILABLE")
     if not upstream_fresh: blockers.append("UPSTREAM_PRODUCER_NOT_FRESH")
@@ -178,7 +187,17 @@ def observe(fetch=get) -> dict:
         "github_main_sha": main,
         "hf_space_revision": space_sha,
         "hf_sdk": sdk, "hf_provider_runtime_stage": stage,
-        "http_get_statuses": routes,
+        "static_site_origin": STATIC_URL,
+        "static_http_get_statuses": static_routes,
+        "static_frontend_reachable": static_serving,
+        "static_frontend_state": ("PUBLIC_STATIC_UI_REACHABLE" if static_serving
+                                  else "STATIC_UI_NOT_CONFIRMED" if sdk == "static"
+                                  else "NOT_APPLICABLE_TO_DOCKER"),
+        "static_served_index_sha256": data[STATIC_URL + "/index.html"].sha256,
+        "static_source_byte_parity_independently_verified": False,
+        "docker_application_origin": APP_URL,
+        "docker_root_http_200": http_root,
+        "http_get_statuses": routes,  # legacy name: Docker-form origin ONLY
         "http_root_reachable": http_root,
         "all_non_readiness_routes_http_200": all_http,
         "readyz_http_status": ready_status,
