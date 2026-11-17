@@ -13,6 +13,7 @@ import plotly.graph_objects as go
 from backend.live_data import snapshot, research, summary
 from backend.admission import training_decision, compute_status
 from backend.live_sources import status as public_space_status
+from backend.ena_catalog import sample as ena_sample
 
 CSS = """
 .gradio-container{max-width:1460px!important}
@@ -96,6 +97,21 @@ def publications():
            for row in r["papers"]]
     return label,table
 
+def sequencing():
+    """Live public ENA accession catalog, never private biological assay results."""
+    result = ena_sample(force=True)
+    scope = ("### EMBL-EBI ENA: **"+result["state"]+"**\n"+
+             "Fixed NCBI taxonomy: 6239 (*C. elegans*). At most six catalog records. "+
+             "Bounded sample, **not a census**, not a live experiment, "+
+             "not labeled material authorized for model training.\n\n"+
+             "Source: [official ENA taxonomy-search documentation]"+
+             "(https://ena-docs.readthedocs.io/en/latest/retrieval/programmatic-access/taxon-based-search.html)")
+    rows=[[str(record.get(k) or "")[:140] for k in
+           ("run_accession","study_accession","sample_accession","instrument_platform","first_public")]
+          for record in result.get("records", [])]
+    return scope, rows
+
+
 def build_ui():
     with gr.Blocks(title="WINK Observatory | SZL Holdings",css=CSS) as ui:
         gr.HTML('<div class="hero"><h1>WINK / WET-LAB OBSERVATORY</h1>'+
@@ -112,6 +128,14 @@ def build_ui():
             criteria=gr.Dataframe(headers=["Criterion","Recorded pass","Can fail?","A10/finding"],
                                   datatype=["str"]*4,interactive=False,wrap=True)
             gr.Markdown("Unknown, missing, low-power or uninterpretable results are never displayed as PROVED.")
+        with gr.Tab("Public experimental archive"):
+            archive_state=gr.Markdown(
+                "ENA data are public sequencing accession metadata; no lab instrumentation is connected.")
+            archive_rows=gr.Dataframe(
+                headers=["Run accession","Study","Sample","Platform","First public"],
+                datatype=["str"]*5,interactive=False,wrap=True)
+            gr.Button("Inspect public C. elegans ENA catalog").click(
+                sequencing,outputs=[archive_state,archive_rows])
         with gr.Tab("Training + HPC"):
             gates=gr.Dataframe(headers=["Admissibility","State","Required evidence"],
                                datatype=["str"]*3,interactive=False,wrap=True)
@@ -126,7 +150,7 @@ def build_ui():
         with gr.Tab("Developer + investor evidence"):
             data=gr.JSON(label="Evidence lineage and decision structure")
             gr.Markdown("Developer HTTP GET routes: /api/v1/observatory, /api/v1/research, "+
-                        "/api/v1/training, /api/v1/compute, /api/v1/public-space, /api/v1/build-info, /healthz, "+
+                        "/api/v1/training, /api/v1/compute, /api/v1/public-space, /api/v1/sequence-catalog, /api/v1/build-info, /healthz, "+
                         "/readyz, /docs. No write or execution endpoints.")
             gr.Markdown("[Source repository](https://github.com/szl-holdings/wink-observatory)"+
                         " · [Pinned public feed](https://huggingface.co/datasets/SZLHOLDINGS/wink-observatory-data)"+
