@@ -16,7 +16,7 @@ jobs:
       - name: Existing WINK data contract
         run: python backend/validate.py
       - name: Evidence and training gates
-        run: python -B -m unittest discover -s tests -p 'test_python_observatory.py' -v
+        run: python -B -m unittest discover -s tests -p 'test_*.py' -v
       - name: Syntax and whitespace
         run: |
           python -B -m compileall -q backend app.py tests
