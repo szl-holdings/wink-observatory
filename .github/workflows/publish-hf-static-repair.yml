@@ -1,0 +1,140 @@
+name: WINK HF static HTML repair (owner manual only)
+on:
+  workflow_dispatch:
+    inputs:
+      expected_main_sha:
+        required: true
+        description: Exact protected GitHub main revision holding reviewed completed HTML
+        type: string
+      expected_hf_sha:
+        required: true
+        description: Exact original public static HF revision (no moving branch)
+        type: string
+      approved_maintenance_window:
+        required: true
+        description: Reviewed operator maintenance window OPEN for static HTML repair
+        type: boolean
+        default: false
+      static_repair_approved:
+        required: true
+        description: Owner explicitly approves ONLY replacing index.html (no SDK change)
+        type: boolean
+        default: false
+      rollback_ready:
+        required: true
+        description: Owner reviewed full four-file rollback archive and restoration route
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+# Shared with the one Docker-migration publisher to guarantee one writer at a time.
+concurrency:
+  group: wink-hf-single-writer
+  cancel-in-progress: false
+
+jobs:
+  static-repair:
+    if: github.repository == 'szl-holdings/wink-observatory' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    environment:
+      name: hf-wink-production
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0 # historical pre-fix source SHA must be present for rollback proof
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: '3.12'
+      - name: Require exact protected main plus maintenance and owner scopes
+        shell: bash
+        env:
+          EXPECTED_MAIN_SHA: ${{ inputs.expected_main_sha }}
+          EXPECTED_HF_SHA: ${{ inputs.expected_hf_sha }}
+          WINDOW: ${{ inputs.approved_maintenance_window }}
+          SCOPE: ${{ inputs.static_repair_approved }}
+          ROLLBACK: ${{ inputs.rollback_ready }}
+        run: |
+          set -euo pipefail
+          latest="$(git ls-remote origin refs/heads/main | cut -f1)"
+          test "$latest" = "$GITHUB_SHA" && test "$GITHUB_SHA" = "$EXPECTED_MAIN_SHA"
+          test "$EXPECTED_HF_SHA" = "01e1021e7e1d80a0d4754fa01ca84282cb854c85"
+          test "$WINDOW" = "true" && test "$SCOPE" = "true" && test "$ROLLBACK" = "true"
+          python -B -m unittest discover -s tests -p 'test_*.py' -q
+          python backend/validate.py
+      - name: Read and verify complete prior four-file public static source
+        shell: bash
+        env:
+          HF_SHA: ${{ inputs.expected_hf_sha }}
+        run: |
+          set -euo pipefail
+          python -I -B scripts/wink_rollback_snapshot.py \
+            --source-sha "190488e0c15e2c69cfe04681f23697e53b337b45" \
+            --hf-sha "$HF_SHA" \
+            --out-dir "$RUNNER_TEMP/wink-rollback-original-public-static"
+      - name: Preserve source-verified rollback artifact BEFORE any provider writes
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: wink-original-public-static-rollback-${{ github.run_id }}
+          path: ${{ runner.temp }}/wink-rollback-original-public-static/
+          if-no-files-found: error
+          include-hidden-files: true
+          retention-days: 90
+      - name: Install exact published Hugging Face API dependency
+        run: python -m pip install --disable-pip-version-check huggingface_hub==2.4.0
+      - name: Publish only source-verified index.html with HF revision CAS
+        env:
+          EXPECTED_MAIN_SHA: ${{ inputs.expected_main_sha }}
+          EXPECTED_HF_SHA: ${{ inputs.expected_hf_sha }}
+          APPROVED_WINDOW: ${{ inputs.approved_maintenance_window }}
+          STATIC_REPAIR_APPROVED: ${{ inputs.static_repair_approved }}
+          ROLLBACK_READY: ${{ inputs.rollback_ready }}
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: python -I -B scripts/publish_hf_static.py
+      - name: Independent public static-vs-Docker origin readback, no science promotion
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -I -B scripts/wink_release_probe.py --output "$RUNNER_TEMP/wink-static-post-commit-readback.json"
+          python - <<'PY'
+          import json,os
+          from pathlib import Path
+          doc=json.loads((Path(os.environ['RUNNER_TEMP'])/'wink-static-post-commit-readback.json').read_text())
+          if doc["hf_sdk"]!="static" or doc["release_admission"]!="HOLD":
+              raise SystemExit("SDK_CHANGED_OR_FALSE_RELEASE_ADMISSION")
+          print("SOURCE_PUBLISH_COMPLETE; STATIC_UI_HTTP="+str(doc["static_frontend_reachable"])+"; DOCKER_NOT_DEPLOYED")
+          print("NEXT_STEP_REAL_CHROMIUM_CLIENT_BOOT; SCIENTIFIC_AND_DOCKER_ADMISSION_SEPARATE")
+          PY
+      - name: Install pinned real-browser QA on ephemeral runner
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check playwright==1.64.0
+          python -m playwright install chromium --with-deps
+      - name: Prove the published static 3D JavaScript boots, not just HTTP 200
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 6); do
+            if python -B scripts/wink_browser_smoke.py --target public; then
+              echo "::notice::PUBLIC_STATIC_BROWSER_CLIENT_BOOT_VERIFIED; LAB_SCIENCE_AND_PYTHON_DOCKER_STILL_HOLD"
+              exit 0
+            fi
+            if [ "$attempt" -ge 6 ]; then
+              echo "::error::STATIC_BROWSER_BOOT_UNVERIFIED_AFTER_PROVIDER_COMMIT; retain pinned rollback artifact and escalate to owner"
+              exit 1
+            fi
+            sleep 18
+          done
+      - name: Retain labeled post-write readback even if final HTTP or science fails
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: wink-static-repair-public-readback-${{ github.run_id }}
+          path: ${{ runner.temp }}/wink-static-post-commit-readback.json
+          if-no-files-found: warn
+          retention-days: 30

@@ -4,7 +4,7 @@
 **A 3D research evidence instrument for the proposed SZL Holdings and Vidal-Gadea Lab evaluation protocol (v1.1, not frozen).**
 
 Open it: **[WINK Observatory Space](https://huggingface.co/spaces/SZLHOLDINGS/wink-observatory)** ·
-**Verified public static frontend HTTP endpoint:** [WINK interactive 3D experience](https://szlholdings-wink-observatory.static.hf.space/index.html) (GET 200 on Nov 17). The static site is **not** the unlaunched Python/Docker research backend; the published fleet snapshot may be stale.
+**Release admission (Nov 17):** The [existing static HF endpoint](https://szlholdings-wink-observatory.static.hf.space/index.html) returns HTTP 200 but its published HTML is **truncated mid-JavaScript**; independent Chromium showed `BOOT`, `starting...`, and unrendered panels. The corrected Three.js/3D frontend and pinned public dataset readback are now implemented and browser-tested in GitHub, but **are not live until the owner-approved static HTML repair publishes**. The Python/Docker backend is separately unlaunched; the fleet source snapshot is stale.
 
 Live data: **[wink-observatory-data](https://huggingface.co/datasets/SZLHOLDINGS/wink-observatory-data)** ·
 Lab: **[Vidal-Gadea Lab](https://agvg75.github.io/lab/)**
