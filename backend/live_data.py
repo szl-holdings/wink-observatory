@@ -58,6 +58,7 @@ def get_json(url: str) -> dict:
     allowed = (
         (p.netloc == "huggingface.co" and not p.query and
          (p.path == "/api/datasets/" + DATASET or
+          p.path == "/api/spaces/SZLHOLDINGS/wink-observatory" or
           p.path.startswith("/datasets/" + DATASET + "/raw/")))
         or (p.netloc == "www.ebi.ac.uk" and
             p.path == "/europepmc/webservices/rest/search")
