@@ -84,7 +84,8 @@ def observe(target: str) -> dict:
                 hasWebGL:!!(document.querySelector('#c')?.getContext('webgl2') ||
                           document.querySelector('#c')?.getContext('webgl')),
                 navCount:document.querySelectorAll('#navBtns button').length,
-                drawCalls:window.__wink_draw_calls||0
+                drawCalls:window.__wink_draw_calls||0,
+                renderedNodes:Number(document.getElementById('feedBadge')?.dataset.renderedNodes||0)
               })""")
             # The tab is meaningful only if the module actually registered
             # interaction handlers; syntactic HTML without JS would fail.
@@ -114,6 +115,8 @@ def observe(target: str) -> dict:
                         data.get("navCount") == 4 and
                         "active" in (nav_active or "") and
                         data.get("drawCalls",0) >= 100 and
+                        type(data.get("renderedNodes")) is int and
+                        1 <= data["renderedNodes"] <= 256 and
                         post_draws > data.get("drawCalls",0) and
                         len(before_png) > 15000 and len(after_png) > 15000 and
                         sha256(before_png).digest() != sha256(after_png).digest() and
@@ -128,6 +131,7 @@ def observe(target: str) -> dict:
                 "feed_badge": badge,
                 "feed_detail": data.get("feedTime"),
                 "has_webgl": data.get("hasWebGL"),
+                "itemized_worm_nodes": data.get("renderedNodes"),
                 "webgl_draw_calls_before": data.get("drawCalls"),
                 "webgl_draw_calls_after": post_draws,
                 "canvas_png_size_bytes": len(before_png),

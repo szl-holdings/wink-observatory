@@ -23,7 +23,7 @@ border:1px solid #2c6b80;border-radius:16px;padding:25px;color:#edfbff}
 .hero h1{font-size:2.4rem;margin:0}.hero p{color:#b3dfe7}
 """
 COLOR = {"running":"#2de4be","parked":"#b6a5f5","degraded":"#ffbf60",
-         "stopped":"#fa7283","complete":"#61ceff"}
+         "stopped":"#fa7283","complete":"#61ceff","not-found":"#9aa7b8"}
 
 def worm_figure(groups: list[dict]):
     """Non-anatomical 3D compute metaphor generated entirely from Python."""

@@ -96,6 +96,40 @@ class PublicEvidenceTests(unittest.TestCase):
                                      "WINK_COMPUTE_TRUSTED_HOST":"127.0.0.1"},clear=True):
             self.assertEqual(compute_status()["state"],"CONFIG_REJECTED")
 
+    def test_public_fleet_can_grow_without_suppressing_not_found(self):
+        docs = copy.deepcopy(self.docs)
+        groups = docs["fleet"]["groups"]
+        for i in range(10):
+            groups.append({
+                "name": "public-test-synthetic-" + str(i),
+                "lane": "training",
+                "status": "not-found" if i >= 7 else "parked",
+                "detail": "synthetic test only",
+            })
+        docs["fleet"]["totals"].update(groups=132, active=35, itemized_here=17)
+        live.validate(docs)
+        sample = {
+            "source_state": "PUBLIC_DATASET_READBACK",
+            "source_kind": "PUBLIC_REPOSITORY",
+            "dataset_revision": "f" * 40,
+            "retrieved_at": "2026-11-17T13:00:00Z",
+            "docs": docs,
+        }
+        report = live.summary(sample)
+        self.assertEqual(report["operator_itemized"], 17)
+        self.assertEqual(report["provider_reported_groups"], 132)
+        self.assertEqual(report["operator_not_found_itemized"], 3)
+        self.assertFalse(report["not_found_count_is_live_health"])
+        self.assertFalse(report["signature_verified"])
+        corrupted = copy.deepcopy(docs)
+        corrupted["fleet"]["groups"][-1]["status"] = "fake-healthy"
+        with self.assertRaisesRegex(live.SourceUnavailable, "FLEET_STATUS_INVALID"):
+            live.validate(corrupted)
+        corrupted = copy.deepcopy(docs)
+        corrupted["fleet"]["totals"]["itemized_here"] = 7
+        with self.assertRaisesRegex(live.SourceUnavailable, "FLEET_TOTALS_CONTRADICT"):
+            live.validate(corrupted)
+
     def test_live_http_does_not_grant_signature_or_lab_authority(self):
         s={"source_state":"PUBLIC_DATASET_READBACK","source_kind":"PUBLIC_REPOSITORY",
            "dataset_revision":"f"*40,"retrieved_at":"2026-11-17T04:00:00Z",

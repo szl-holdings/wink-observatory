@@ -75,7 +75,8 @@
   <span class="dot" style="background:#4da6ff"></span>PARKED/COMPLETE &nbsp;
   <span class="dot" style="background:#ffb400"></span>DEGRADED &nbsp;
   <span class="dot" style="background:#ff5d5d"></span>STOPPED &nbsp;
-  <span class="dot" style="background:#9d7bff"></span>A10 UNINTERPRETABLE
+  <span class="dot" style="background:#9d7bff"></span>A10 UNINTERPRETABLE &nbsp;
+  <span class="dot" style="background:#8b92a5"></span>NOT FOUND
 </div>
 <div class="hud" id="links">
   <a href="https://huggingface.co/datasets/SZLHOLDINGS/wink-observatory-data" target="_blank">DATA</a> &middot;
@@ -150,15 +151,17 @@ function textSprite(txt, color, size){
   var t = new THREE.CanvasTexture(cv); var m = new THREE.SpriteMaterial({ map: t, transparent: true, depthWrite: false });
   var s = new THREE.Sprite(m); s.scale.set(size, size/8, 1); return s;
 }
-var STATUS_COLOR = { running: 0x00ff9d, parked: 0x4da6ff, complete: 0x4da6ff, degraded: 0xffb400, stopped: 0xff5d5d };
+var STATUS_COLOR = { running: 0x00ff9d, parked: 0x4da6ff, complete: 0x4da6ff, degraded: 0xffb400, stopped: 0xff5d5d, 'not-found': 0x8b92a5 };
 
 var wormGroup = new THREE.Group(); scene.add(wormGroup);
 var nodeMeshes = [];
+var wormCurve = null;
 (function worm(){
   var pts = [];
   for (var i=0;i<=8;i++){ var t = i/8;
     pts.push(new THREE.Vector3(-16 + t*26, Math.sin(t*Math.PI*2.2)*2.4, Math.sin(t*Math.PI*1.6)*3.2)); }
   var curve = new THREE.CatmullRomCurve3(pts);
+  wormCurve = curve;
   var body = new THREE.Mesh(new THREE.TubeGeometry(curve, 120, 0.9, 16, false),
     new THREE.MeshStandardMaterial({ color: 0x0a2f6e, emissive: 0x062048, transparent: true, opacity: 0.42, roughness: 0.35, metalness: 0.4 }));
   wormGroup.add(body);
@@ -172,21 +175,46 @@ var nodeMeshes = [];
   wormGroup.userData.ring = ring;
   var label = textSprite('THE WORM \u00b7 FLEET TELEMETRY \u00b7 STYLIZED, NOT ANATOMICAL', '#8fd0ff', 14);
   label.position.set(-3, 7.2, 0); wormGroup.add(label);
-  var gs = DATA.fleet.groups;
-  for (var g=0; g<gs.length; g++){
-    var t2 = 0.14 + (g / Math.max(1, gs.length-1)) * 0.72;
-    var p = curve.getPoint(t2);
-    var col = STATUS_COLOR[gs[g].status] || 0x888888;
-    var node = new THREE.Mesh(new THREE.SphereGeometry(0.42, 20, 20),
-      new THREE.MeshStandardMaterial({ color: col, emissive: col, emissiveIntensity: 1.4, roughness: 0.2 }));
-    node.position.copy(p); node.userData = gs[g];
-    var glow = new THREE.Sprite(new THREE.SpriteMaterial({
-      map: glowTex('rgba(255,255,255,0.95)', gs[g].status==='running' ? 'rgba(0,255,157,0.45)' : gs[g].status==='parked' ? 'rgba(77,166,255,0.45)' : 'rgba(255,120,60,0.45)'),
-      transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
-    glow.scale.set(2.6, 2.6, 1); node.add(glow);
-    wormGroup.add(node); nodeMeshes.push(node);
-  }
+  syncWormNodes(DATA.fleet.groups);
 })();
+function syncWormNodes(groups){
+  if (!Array.isArray(groups) || groups.length > 256) {
+    throw Error('FLEET_RENDER_COUNT_INVALID');
+  }
+  // Dispose old geometry, materials and textures before rebuilding an
+  // evolving fleet (the public dataset can grow beyond the original 7).
+  for (var old of nodeMeshes) {
+    wormGroup.remove(old);
+    for (var child of old.children) {
+      if (child.material && child.material.map) child.material.map.dispose();
+      if (child.material) child.material.dispose();
+    }
+    old.geometry.dispose(); old.material.dispose();
+  }
+  nodeMeshes = [];
+  for (var g=0; g<groups.length; g++){
+    var row=groups[g];
+    var t2 = 0.14 + (g / Math.max(1, groups.length-1)) * 0.72;
+    var position=wormCurve.getPoint(t2);
+    var color=STATUS_COLOR[row.status] || 0x888888;
+    var node=new THREE.Mesh(new THREE.SphereGeometry(0.42,20,20),
+      new THREE.MeshStandardMaterial({color:color,emissive:color,
+                                     emissiveIntensity:1.4,roughness:0.2}));
+    node.position.copy(position);
+    node.userData=row;
+    var glow=new THREE.Sprite(new THREE.SpriteMaterial({
+      map:glowTex('rgba(255,255,255,0.95)',
+        row.status==='running' ? 'rgba(0,255,157,0.45)' :
+        row.status==='parked' ? 'rgba(77,166,255,0.45)' : 'rgba(255,120,60,0.45)'),
+      transparent:true,depthWrite:false,blending:THREE.AdditiveBlending
+    }));
+    glow.scale.set(2.6,2.6,1);
+    node.add(glow);
+    wormGroup.add(node);
+    nodeMeshes.push(node);
+  }
+  document.getElementById('feedBadge').dataset.renderedNodes=String(nodeMeshes.length);
+}
 
 var helixGroup = new THREE.Group(); helixGroup.position.set(18, 0, -6); scene.add(helixGroup);
 (function helix(){
@@ -309,25 +337,15 @@ function renderSpark(){
 function applyLive(){
   renderProto(); renderBattery(); renderSpark();
   var f = DATA.fleet;
-  if (f && Array.isArray(f.groups)) {
-    for (var i = 0; i < nodeMeshes.length; i++) {
-      var row = f.groups[i];
-      var node = nodeMeshes[i];
-      if (!row) {
-        node.visible = false;
-        continue;
-      }
-      node.visible = true;
-      node.userData = row;
-      var color = STATUS_COLOR[row.status] || 0x888888;
-      node.material.color.setHex(color);
-      node.material.emissive.setHex(color);
-    }
-  }
+  if (f && Array.isArray(f.groups)) syncWormNodes(f.groups);
   var note = document.getElementById('note');
   var witnesses = (DATA.witness && Array.isArray(DATA.witness.records)) ?
       DATA.witness.records.length : null;
-  note.textContent = 'PUBLIC DATASET SNAPSHOT · ' +
+  var shown = f && Array.isArray(f.groups) ? f.groups.length : 0;
+  var total = f && f.totals && Number.isInteger(f.totals.groups) ?
+      f.totals.groups : 'UNKNOWN';
+  note.textContent = 'PUBLIC DATASET SNAPSHOT ' + shown + '/' + total +
+      ' ITEMIZED · ' +
       (witnesses === null ? 'WITNESS STATE UNKNOWN' :
        witnesses === 0 ? 'PART D NOT STARTED' : 'PART D NOT INDEPENDENTLY VERIFIED') +
       ' · STYLIZED, NOT ANATOMICAL · SCIENCE QUALIFICATION HOLD';
@@ -374,7 +392,7 @@ var CORE_FILES = [
   'fleet/snapshot.json', 'witness/records.json', 'protocol/status.json',
   'receipts/v5-heldout.json', 'receipts/v5-bench.json', 'receipts/a10-diagnosis.json'
 ];
-var KNOWN_STATUSES = new Set(['running','parked','complete','degraded','stopped']);
+var KNOWN_STATUSES = new Set(['running','parked','complete','degraded','stopped','not-found']);
 var KNOWN_CRITERIA = [
   'criterion_2_contamination','criterion_3_refusal',
   'criterion_4_neutral','criterion_5_invented_id'
@@ -393,10 +411,13 @@ function validatedPublic(m, docs){
   var fleet = docs[0], witness = docs[1], proto = docs[2],
       heldout = docs[3], bench = docs[4], a10 = docs[5];
   if (!fleet || fleet.schema_version !== 'wink/fleet-snapshot/v0.1' ||
-      !Array.isArray(fleet.groups) || fleet.groups.length !== nodeMeshes.length ||
-      !fleet.totals || fleet.totals.itemized_here !== fleet.groups.length ||
+      !Array.isArray(fleet.groups) || fleet.groups.length > 256 ||
+      !fleet.totals || !Number.isInteger(fleet.totals.itemized_here) ||
+      fleet.totals.itemized_here !== fleet.groups.length ||
       !Number.isInteger(fleet.totals.groups) ||
-      fleet.totals.groups < fleet.groups.length) {
+      fleet.totals.groups < fleet.groups.length ||
+      !Number.isInteger(fleet.totals.active) ||
+      fleet.totals.active < 0 || fleet.totals.active > fleet.totals.groups) {
     throw Error('PUBLIC_FLEET_SCHEMA_OR_DENOMINATOR_INVALID');
   }
   fleet.groups.forEach(function(row){
@@ -502,17 +523,22 @@ async function refreshPublic(){
       ' · NOT a live wet-lab instrument',
       fresh ? 'fresh' : 'stale');
   } catch (err) {
+    // Public-only fail-closed reason. No JSON text, source URLs or secrets
+    // are copied into the visible status; only reviewed machine error codes.
+    var reason = err && typeof err.message === 'string' &&
+        /^[A-Z0-9_]{5,90}$/.test(err.message) ?
+        err.message : 'PUBLIC_SOURCE_READBACK_FAILED';
     if (lastApproved) {
       DATA = lastApproved;
       applyLive();
       reportFeed('CACHED SNAPSHOT', 'Last pinned source ' +
                  lastApproved.sourceSha.slice(0,12) +
-                 ' · refresh unavailable · producer freshness NOT confirmed', 'stale');
+                 ' · '+reason+' · refresh unavailable · producer freshness NOT confirmed', 'stale');
     } else {
       DATA = JSON.parse(JSON.stringify(SEED));
       applyLive();
       reportFeed('OFFLINE BASELINE',
-                 'Illustrative source-controlled data only · no current provider readback', 'error');
+                 'Illustrative source-controlled data only · '+reason+' · no current provider readback', 'error');
     }
   }
 }

@@ -56,7 +56,7 @@ class FakeHub:
         assert kwargs["repo_type"]=="space"
         assert kwargs["revision"]=="main"
         assert kwargs["repo_id"]=="SZLHOLDINGS/wink-observatory"
-        assert kwargs["folder_path"]=="dist/hf-space"
+        assert Path(kwargs["folder_path"])==Path("dist/hf-space")
         assert not any(key in kwargs for key in ("delete_patterns","force"))
         self.latest=PUBLISHED
         return SimpleNamespace(oid=PUBLISHED)
