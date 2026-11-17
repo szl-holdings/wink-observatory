@@ -1,0 +1,48 @@
+{
+ "schema_version": "wink/protocol-status/v0.1",
+ "instrument": "Gate behaviour and method reproducibility: a co-signed instrument (WINK evaluation protocol)",
+ "version": "v1.1",
+ "version_date": "2026-11-16",
+ "parties": {
+  "szl": "SZL Holdings (Stephen Lutar)",
+  "lab": "Vidal-Gadea Lab, School of Biological Sciences, Illinois State University (Andres Vidal-Gadea)"
+ },
+ "freeze": {
+  "frozen": false,
+  "deposit": null,
+  "doi": null,
+  "freeze_date": null,
+  "note": "No freeze, no date asserted by either party."
+ },
+ "new_clauses": {
+  "A9": "An acceptance rule is published with evidence it could have failed (power statement or negative control)",
+  "A10": "A criterion measured outside its plausible range is reported UNINTERPRETABLE, not passed",
+  "B5": "In-distribution fit is labelled on the table, not in the covering letter",
+  "10.4": "A not-recoverable verdict states locations searched and the commit searched against"
+ },
+ "settled": [
+  "k equals 10 (A2)",
+  "C1 identifier rule",
+  "weekly cadence, first observation at signature (D2)",
+  "named accountability",
+  "sections 12 and 13 confirmed",
+  "B1 division of labour (SZL worked example; lab is outside party)"
+ ],
+ "open_szl": {
+  "2": "second A3 operator to be named before freeze",
+  "4": "what the 0.05 neutral measurement is — ANSWERED in receipts/a10-diagnosis.json",
+  "5": "receipt exports for artefacts behind member access — this dataset is that export (B2.1)",
+  "6": "provenance vs power on the excluded 1.3% and 20.7% figures (3.3(c))",
+  "7": "explicit retraction of 'replicated' in the letter of 7 November",
+  "8": "status of PR #727"
+ },
+ "open_lab": [
+  "1: recompute 51 of 468 under C1 or cite as hand count",
+  "3: whether SZL fixture bytes may cross the lab perimeter (B2.2)"
+ ],
+ "open_both": [
+  "9: fixture licence terms",
+  "10: provenance and contribution table",
+  "11: deposit venue and freeze date (proposed: Zenodo)"
+ ]
+}

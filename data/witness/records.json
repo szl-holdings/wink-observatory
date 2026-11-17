@@ -1,0 +1,6 @@
+{
+ "schema_version": "wink/witness/v0.1-draft",
+ "series_status": "NOT_STARTED",
+ "note": "Per protocol v1.1 D2, the first observation falls at co-signature. No freeze date is asserted. Records will be append-only and digest-chained (SHA3-256 over canonical JSON, chaining the previous record digest).",
+ "records": []
+}
