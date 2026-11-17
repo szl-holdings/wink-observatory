@@ -11,6 +11,7 @@ import gradio as gr
 from backend.live_data import fresh, producer_fresh, research, snapshot, summary
 from backend.admission import compute_status, training_decision
 from backend.live_sources import status as public_space_status
+from backend.ena_catalog import sample as ena_sample
 from backend.ui import build_ui
 
 api=FastAPI(title="WINK Observatory",version="1.0.0",
@@ -42,6 +43,14 @@ def readyz():
 @api.get("/api/v1/observatory")
 def observatory():
     return {"schema":"wink.observatory.public-evidence/v1",**summary(snapshot())}
+
+@api.get("/api/v1/sequence-catalog")
+def sequence_catalog():
+    """Six accession metadata rows maximum. No FASTQ, study-wide census or lab data."""
+    result = ena_sample()
+    status = 200 if result["state"] in ("LIVE_PUBLIC_ARCHIVE_CATALOG", "CACHED_PUBLIC_ARCHIVE_CATALOG") else 503
+    return JSONResponse(status_code=status, content=result)
+
 
 @api.get("/api/v1/research")
 def literature():
