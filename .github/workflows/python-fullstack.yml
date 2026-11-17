@@ -126,3 +126,68 @@ jobs:
                             "producer_telemetry_state":e["producer_telemetry_state"],
                             "direct_wetlab_source":False},sort_keys=True))
           PY
+
+  container-smoke:
+    name: Docker candidate serves root and truthful source identity
+    runs-on: ubuntu-latest
+    needs: [source-contracts, python-service]
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Build the same pinned source tree used by the owner HF publisher
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist/hf-space
+          cp -a backend data app.py Dockerfile requirements.txt dist/hf-space/
+          cp deploy/hf/README.md dist/hf-space/README.md
+          printf '%s\n' "$GITHUB_SHA" > dist/hf-space/SOURCE_REVISION
+          docker build --pull --tag "wink-python-ci:$GITHUB_SHA" dist/hf-space
+      - name: Verify anonymous Python UI/ASGI transport and declared SHA
+        shell: bash
+        run: |
+          set -euo pipefail
+          image="wink-python-ci:$GITHUB_SHA"
+          id="$(docker run --detach --rm --cap-drop ALL \
+             --security-opt no-new-privileges \
+             --publish 127.0.0.1:17860:7860 "$image")"
+          cleanup() {
+            docker logs --tail 40 "$id" 2>/dev/null || true
+            docker rm --force "$id" >/dev/null 2>&1 || true
+          }
+          trap cleanup EXIT
+          ready=0
+          for attempt in $(seq 1 30); do
+            if curl --silent --show-error --fail --max-time 4 \
+                --output /tmp/wink-root.html http://127.0.0.1:17860/ &&
+               curl --silent --show-error --fail --max-time 4 \
+                --output /tmp/wink-health.json http://127.0.0.1:17860/healthz; then
+              ready=1
+              break
+            fi
+            sleep 2
+          done
+          if [ "$ready" != 1 ]; then
+            echo "::error::WINK_DOCKER_SERVING_ROOT_UNAVAILABLE"
+            exit 1
+          fi
+          grep -qi 'html' /tmp/wink-root.html
+          curl --silent --show-error --fail --max-time 4 \
+            --output /tmp/wink-build.json http://127.0.0.1:17860/api/v1/build-info
+          python - <<'PY'
+          import json,os
+          from pathlib import Path
+          health=json.loads(Path('/tmp/wink-health.json').read_text())
+          build=json.loads(Path('/tmp/wink-build.json').read_text())
+          assert health['process']=='SERVING'
+          assert build['declared_source_revision']==os.environ['GITHUB_SHA']
+          assert build['source_authority']=='PUBLISHER_DECLARATION_ONLY'
+          assert build['independent_runtime_verified'] is False
+          assert build['gpu_training_started'] is False
+          print('DOCKER_CANDIDATE_ROOT_HTTP_200; SOURCE_DECLARED='+build['declared_source_revision'])
+          print('NO_HF_DEPLOYMENT_NO_SCIENTIFIC_OR_INDEPENDENT_RUNTIME_ADMISSION')
+          PY
+          uid="$(docker exec "$id" id -u)"
+          test "$uid" = 1000

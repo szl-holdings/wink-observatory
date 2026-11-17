@@ -63,6 +63,10 @@ class ReleaseTopologyTests(unittest.TestCase):
         self.assertIn("test_*.py", fullstack)
         self.assertIn("client.get(\"/\", follow_redirects=False)", fullstack)
         self.assertIn("public-source-readback:", fullstack)
+        self.assertIn("container-smoke:", fullstack)
+        self.assertIn("docker build --pull", fullstack)
+        self.assertIn("DOCKER_CANDIDATE_ROOT_HTTP_200", fullstack)
+        self.assertIn("NO_HF_DEPLOYMENT_NO_SCIENTIFIC_OR_INDEPENDENT_RUNTIME_ADMISSION", fullstack)
 
 
 if __name__ == "__main__":
