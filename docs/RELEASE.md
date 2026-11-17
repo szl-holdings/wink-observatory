@@ -531,3 +531,44 @@ again and use the newly observed exact parent/source revisions.
 No Python/Docker SDK migration, GPU budget, wet-lab instrument,
 partner countersignature, training license or scientific validity
 is inferred from a working static 3D visualization.
+
+### Production browser telemetry compatibility: deployed HTML vs current GitHub main
+
+A successful owner-authorized production static HTML-only release completed at
+2026-11-17 13:44:43 UTC: Hugging Face Space revision
+`d2a0de158aad9f015e0bda40f6a1739bdbce8a37` has byte-identical HTML to
+protected GitHub commit `cf23320e18c04b1441937e7802f1acff88dfd88a`.
+An independent real Chromium check subsequently witnessed actual deployed
+WebGL rendering (7060 draw calls before navigation, 9244 after), working
+navigation and A9/A10 panels, pinned public dataset revision `3a9d5b...`,
+and STALE SNAPSHOT classification. No JavaScript or HTTP request errors were
+observed. **The deployed public static 3D client is functioning**, even
+though scientific validation, the new Python/Docker backend and fresh
+instrument data are NOT established.
+
+After PR #17, protected GitHub main is newer than that deployed HF revision.
+The new source instruments itemized scene node counts by adding a
+`data-rendered-nodes` attribute to the feed badge. The already deployed
+HF HTML does not expose that attribute. An older browser observer incorrectly
+converted absence of that attribute into a measured zero and reported a
+public-client boot failure, despite independent proof that the 3D client
+was functioning.
+
+The public browser witness now makes that distinction explicit. For
+`--target local` (GitHub source canary), the instrumented count is
+mandatory, must be a real integer in [1, 256], and a missing/zero/unbounded
+count **fails** source admission. For `--target public`, an *absent*
+attribute is an independently **unknown node count**, never zero and
+never a claim of 17 rendered nodes. Real WebGL draw calls, nonblank moving
+pixels, active navigation, pinned dataset reporting, source-backed
+A9/A10 panels, and zero uncaught browser exceptions remain mandatory
+for public client boot. A present but invalid count still fails.
+
+The public monitor publishes separate `public_itemized_node_count` (null
+when uninstrumented), `public_itemized_node_count_verified` and
+`public_itemized_node_count_state` fields. Source-HF parity to the
+**current** GitHub main is unverified until a subsequent explicitly
+owner-reviewed static publication, and `release_admission` remains HOLD
+until all distinct owner, scientific and runtime gates are satisfied.
+A functioning visual browser is NOT evidence of a wet-lab measurement,
+training run, independent signature, or production Python backend.
