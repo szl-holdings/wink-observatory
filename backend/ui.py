@@ -14,6 +14,7 @@ from backend.live_data import snapshot, research, summary
 from backend.admission import training_decision, compute_status
 from backend.live_sources import status as public_space_status
 from backend.ena_catalog import sample as ena_sample
+from backend.falsifiability import public_audit
 
 CSS = """
 .gradio-container{max-width:1460px!important}
@@ -60,6 +61,7 @@ def dashboard():
     held = docs.get("heldout") or {}
     train = training_decision(s)
     host = compute_status()
+    arithmetic_audit = public_audit(s)
     banner = ("### Feed: **"+escape(ev["source_state"])+"** · Dataset revision: "+
               escape(ev["dataset_revision"] or "UNKNOWN")+"\n"+
               "**Readback UTC:** "+escape(ev["readback_at"] or "UNAVAILABLE")+
@@ -88,7 +90,7 @@ def dashboard():
                          str(row.get("a10_status",audit.get("finding","UNKNOWN")))[:180]])
     gates = [[g["id"],g["state"],g["scope"]] for g in train["gates"]]
     return (banner,worm_figure(groups),group_rows,overview,criteria,gates,
-            {"evidence":ev,"training":train,"compute":host,"public_space":public_space_status()})
+            {"evidence":ev,"training":train,"compute":host,"public_space":public_space_status()}, arithmetic_audit)
 
 def publications():
     r=research()
@@ -128,6 +130,7 @@ def build_ui():
             criteria=gr.Dataframe(headers=["Criterion","Recorded pass","Can fail?","A10/finding"],
                                   datatype=["str"]*4,interactive=False,wrap=True)
             gr.Markdown("Unknown, missing, low-power or uninterpretable results are never displayed as PROVED.")
+            acceptance_arithmetic=gr.JSON(label="Recomputed A9/A10 failure witnesses — mathematical audit only")
         with gr.Tab("Public experimental archive"):
             archive_state=gr.Markdown(
                 "ENA data are public sequencing accession metadata; no lab instrumentation is connected.")
@@ -150,13 +153,13 @@ def build_ui():
         with gr.Tab("Developer + investor evidence"):
             data=gr.JSON(label="Evidence lineage and decision structure")
             gr.Markdown("Developer HTTP GET routes: /api/v1/observatory, /api/v1/research, "+
-                        "/api/v1/training, /api/v1/compute, /api/v1/public-space, /api/v1/sequence-catalog, /api/v1/build-info, /healthz, "+
+                        "/api/v1/training, /api/v1/compute, /api/v1/public-space, /api/v1/sequence-catalog, /api/v1/acceptance-audit, /api/v1/build-info, /healthz, "+
                         "/readyz, /docs. No write or execution endpoints.")
             gr.Markdown("[Source repository](https://github.com/szl-holdings/wink-observatory)"+
                         " · [Pinned public feed](https://huggingface.co/datasets/SZLHOLDINGS/wink-observatory-data)"+
                         " · [Vidal-Gadea Lab](https://agvg75.github.io/lab/)"+
                         " · [Europe PMC](https://europepmc.org/)")
-        outputs=[banner,plot,fleet,overview,criteria,gates,data]
+        outputs=[banner,plot,fleet,overview,criteria,gates,data,acceptance_arithmetic]
         ui.load(fn=dashboard,outputs=outputs)
         refresh.click(fn=dashboard,outputs=outputs)
         gr.Timer(value=60).tick(fn=dashboard,outputs=outputs)
