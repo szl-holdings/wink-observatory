@@ -35,7 +35,7 @@ def readyz():
     ok=fresh(s) and producer_fresh(s) and bool(s.get("dataset_revision"))
     return JSONResponse(status_code=200 if ok else 503,
                         content={"public_dataset":"READABLE" if ok else "UNAVAILABLE",
-                                 "source_state":s["source_state"],"scientific_ready":False,
+                                 "source_state":s["source_state"],"producer_telemetry_state":summary(s)["producer_telemetry_state"],"scientific_ready":False,
                                  "wetlab_instrument":"NOT_CONNECTED"})
 
 @api.get("/api/v1/observatory")
