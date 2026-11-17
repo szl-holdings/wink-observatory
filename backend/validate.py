@@ -11,7 +11,7 @@ import re
 import sys
 
 BASE = pathlib.Path(__file__).resolve().parents[1] / "data"
-STATUSES = {"running", "parked", "complete", "degraded", "stopped"}
+STATUSES = {"running", "parked", "complete", "degraded", "stopped", "not-found"}
 SECRET_PATTERNS = [
     re.compile(r"hf_[A-Za-z0-9]{20,}"),
     re.compile(r"(?i)salad[-_]?api[-_]?key"),
