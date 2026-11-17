@@ -78,7 +78,7 @@ def get_json(url: str) -> dict:
     if not raw or len(raw) > MAX_BYTES:
         raise SourceUnavailable("SOURCE_BYTE_BUDGET")
     try:
-        value = json.loads(raw.decode("utf-8"), object_pairs_hook=pairs, parse_constant=nonfinite)
+        value = json.loads(raw.decode("utf-8"), object_pairs_hook=pairs, parse_constant=nonfinite, parse_float=finite_float)
     except (UnicodeError, ValueError, RecursionError) as exc:
         raise SourceUnavailable("SOURCE_INVALID_JSON") from exc
     if not isinstance(value, dict):
