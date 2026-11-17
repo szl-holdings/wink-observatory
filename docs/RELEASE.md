@@ -248,3 +248,129 @@ static four-file baseline. The static rollback gate is intentionally
 one-time for the first SDK conversion; future Docker-to-Docker updates
 need a separately reviewed rollback contract rather than bypassing this
 strict static source identity.
+
+## November 17: WebGL browser-boot defect discovered and repaired in source
+
+A public HTTP 200 for the canonical static origin did **not** prove the
+Three.js application executed. A fresh, independent headless Chromium 156
+inspection on BETTERWITHAGE loaded the current deployed
+https://szlholdings-wink-observatory.static.hf.space/index.html and observed:
+
+- HTTP status 200 and a canvas element, with WebGL context available.
+- Feed badge stuck at BOOT; timestamp stuck at "starting...".
+- Protocol and receipt panels stuck at "loading...".
+- No 3D state, no live source application rendering and no source validation.
+- The immutable Hugging Face index.html file at
+  01e1021e7e1d80a0d4754fa01ca84282cb854c85 matches the old 19,994-byte
+  GitHub frontend/index.html blob exactly but **ends with an incomplete
+  JavaScript expression "for ("**, with no closing module script, body or HTML
+  document. A browser HTML parser cannot execute that unfinished module.
+
+The earlier "public 3D frontend operational" phrasing was incorrect.
+Transport: PUBLIC_STATIC_HTTP_200; client JavaScript: BOOT_INCOMPLETE;
+scientific validity: HOLD. This is a real functional failure, not a missing
+Docker backend. The Docker-form origin is a separate, correctly unlaunched
+Python runtime and still returns 404.
+
+### Source repair, bounded scientific data, and actual browser check
+
+The repaired frontend/index.html now closes the module/document, enables
+requestAnimationFrame rendering, camera navigation, responsive resize and
+reduced-motion handling. A bounded, anonymous browser loader resolves the
+public WINK HF dataset commit once, pins every JSON read to that exact
+40-character immutable SHA, validates the published scientific status,
+allows only expected schema/criteria, sanitizes all dataset-sourced HTML and
+tooltips, and does not invent witness records or model quality.
+
+A second independent Chromium instance loaded the **local GitHub candidate**
+through localhost with full Three.js CDN/WebGL and the real pinned public
+HF dataset. The resulting browser state was:
+
+- GET repaired local HTML: 200; WebGL canvas created; 3D render loop running.
+- Badge: STALE SNAPSHOT; dataset observed SHA prefix 1bbb219da73c;
+  producer observation about 391 minutes old at that readback.
+- Protocol showed NOT FROZEN and open operator questions.
+- Receipt battery showed named A9/A10 low-power, uninformative and invalid
+  acceptance findings. Part D: NOT STARTED; no created witnesses.
+- JavaScript exceptions: none; reported HTTP errors: none; failed requests:
+  none. Browser availability is an interactive source-candidate check,
+  **not** an HF deployment or independent scientific validity.
+- Offline Python/Node contracts also reject a truncated module. Stale public
+  data is correctly labeled stale rather than promoted to LIVE.
+
+### Separate static-only owner-reviewed release path
+
+The new manual workflow publish-hf-static-repair.yml is strictly limited to
+a one-time repair of the public static Space index.html. It shares the
+wink-hf-single-writer concurrency group and owner-protected
+hf-wink-production environment with the existing Docker publisher. It has
+no push or schedule trigger, does not change README, CSS, Space SDK, hardware,
+billing, app dependencies, GPU or lab data.
+
+Its exact initial provider predecessor MUST be
+01e1021e7e1d80a0d4754fa01ca84282cb854c85. The complete immutable
+four-file static rollback is independently verified and archived BEFORE
+an HF upload_file call. For that historical rollback it uses the exact
+old GitHub frontend mirror at
+190488e0c15e2c69cfe04681f23697e53b337b45. The GitHub checkout uses
+fetch-depth 0 so this historical source blob really exists in CI; the
+existing Docker publisher also receives this correction.
+
+Only once the owner environment reviewer, maintenance window, static repair
+scope, rollback and exact current-main/HF revision checks are satisfied,
+the workflow may replace index.html with the **exact protected GitHub blob**.
+The HF upload is guarded with parent_commit compare-and-swap and independently
+read back by hash. The provider's current static SDK must remain unchanged.
+A successful source upload is NOT a certified JavaScript browser render, nor
+a release of the separate Python/Docker app.
+
+**The static repair has NOT been dispatched or deployed by source changes
+alone.** Nothing here grants a lab countersignature, biological model quality
+claim, training license, GPU allocation, or science admission. Do not mark
+the public 3D visualization functional until the owner-approved publisher
+completes and a real browser verifies the new deployed HF revision.
+
+### Reproducible real-browser check (operator/CI development host)
+
+Independent client-side boot must be checked, not inferred from GET 200 or
+a valid JavaScript parse. The source provides scripts/wink_browser_smoke.py,
+a fixed-origin, manual-only Playwright/Chromium observer. The observer never
+sends credentials or POSTs, changes provider state, consumes training GPU,
+signs scientific records or contacts collaborators.
+
+On a development machine with Python 3.12 and Playwright 1.64.0:
+
+    python -m pip install playwright==1.64.0
+    python -m playwright install chromium
+    # In a separate shell from the repository root:
+    python -m http.server 18760 --bind 127.0.0.1
+    # In the repository root:
+    python scripts/wink_browser_smoke.py --target local
+
+A success means the real browser executed WebGL/Three.js, read a single pinned
+public dataset revision, populated the A9/A10/protocol panels, and responded
+to a navigation click with no uncaught JS exceptions. STALE SNAPSHOT can
+still be a correct result; a hypothetical fresh HTTP fetch cannot rewrite
+the producer's historical timestamp. Browser rendering does NOT clear
+scientific admission or lab agreement requirements.
+
+After owner-approved static-only publication, run:
+
+    python scripts/wink_browser_smoke.py --target public
+
+The current original deployed static revision must fail that client-boot
+test because the incomplete old module remains at BOOT. A working local
+candidate is not a deployed runtime. Publish only through the existing
+protected and serialized, owner-reviewed static repair workflow. A public
+browser verification is still independent of the publisher's returned SHA.
+
+The manual static HTML-only publishing workflow also invokes that same
+Playwright 1.64.0/Chromium client boot check AFTER committing the exact HF
+source revision and verifying the provider's raw HTML bytes. It performs
+bounded source propagation retries and fails the workflow with explicit
+STATIC_BROWSER_BOOT_UNVERIFIED_AFTER_PROVIDER_COMMIT if the public deployed
+HTML remains stuck at BOOT or cannot load/validate its public data. Failure
+does not pretend to undo the provider write; the complete old static rollback
+artifact is retained for a separately authorized recovery. A successful
+browser boot still never qualifies the lab's scientific method or starts
+the separate Python/Docker backend.

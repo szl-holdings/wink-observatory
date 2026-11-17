@@ -51,7 +51,7 @@
 <canvas id="c"></canvas>
 <div id="scanline"></div>
 <div class="hud" id="topbar">
-  <div id="brand">WINK OBSERVATORY<small>SZL HOLDINGS x VIDAL-GADEA LAB &middot; LIVE INSTRUMENT &middot; PROTOCOL v1.1 (NOT FROZEN)</small></div>
+  <div id="brand">WINK OBSERVATORY<small>SZL HOLDINGS x VIDAL-GADEA LAB &middot; PUBLIC RESEARCH SNAPSHOT &middot; PROTOCOL v1.1 (NOT FROZEN)</small></div>
   <div><span class="badge cached" id="feedBadge">BOOT</span><br><span style="font-size:9px;color:#5f87b8" id="feedTime">starting...</span></div>
 </div>
 <div class="hud panel" id="protoPanel">
@@ -111,7 +111,7 @@ var SEED = {
   protocol: { version: "v1.1", freeze: false, open_szl: { "2": "second A3 operator", "4": "neutral measurement - ANSWERED (A10 diagnosis)", "5": "receipt exports - this dataset is the export", "6": "provenance vs power, 1.3%/20.7%", "7": "retract 'replicated' (Nov 7 letter)", "8": "PR #727 status" } }
 };
 var DATA = JSON.parse(JSON.stringify(SEED));
-var BASE = "https://huggingface.co/datasets/SZLHOLDINGS/wink-observatory-data/resolve/main/";
+// Public data must be fetched by immutable exact SHA, never mutable resolve/main.
 
 var scene = new THREE.Scene();
 scene.fog = new THREE.FogExp2(0x04060d, 0.016);
@@ -258,7 +258,7 @@ addEventListener('pointermove', function(e){
   var hits = ray.intersectObjects(nodeMeshes, false);
   if (hits.length){
     var d = hits[0].object.userData;
-    tip.innerHTML = '<b>' + d.name + '</b>[' + d.lane + '] ' + d.status.toUpperCase() + '<br>' + d.detail;
+    tip.innerHTML = '<b>' + escapeHtml(d.name) + '</b>[' + escapeHtml(d.lane) + '] ' + escapeHtml(d.status.toUpperCase()) + '<br>' + escapeHtml(d.detail);
     tip.style.display = 'block'; tip.style.left = (e.clientX+14) + 'px'; tip.style.top = (e.clientY+14) + 'px';
     document.body.style.cursor = 'pointer';
   } else { tip.style.display = 'none'; document.body.style.cursor = 'default'; }
@@ -270,14 +270,14 @@ function renderProto(){
   var htmlx = '<b style="color:#eaf4ff">' + (p.freeze ? 'FROZEN' : 'NOT FROZEN') + '</b> \u00b7 no deposit \u00b7 no DOI \u00b7 no date asserted<br>';
   htmlx += '<span style="color:#7fa8d8">NEW CLAUSES:</span> A9 (rules must be able to fail) \u00b7 A10 (UNINTERPRETABLE, not passed) \u00b7 B5 \u00b7 10.4<br>';
   htmlx += '<span style="color:#7fa8d8">OPEN, SZL SIDE (' + keys.length + '):</span><br>';
-  for (var i=0;i<keys.length;i++){ htmlx += '&nbsp;' + keys[i] + '. ' + p.open_szl[keys[i]] + '<br>'; }
+  for (var i=0;i<keys.length;i++){ htmlx += '&nbsp;' + escapeHtml(keys[i]) + '. ' + escapeHtml(p.open_szl[keys[i]]) + '<br>'; }
   document.getElementById('protoBody').innerHTML = htmlx;
 }
 function renderBattery(){
   var cs = DATA.heldout.criteria; var h = '';
   for (var i=0;i<cs.length;i++){
     var c = cs[i]; var a = c.audit;
-    h += '<div class="crit" style="border-color:' + (a.cls==='red'?'#ff5d5d':'#ffd23f') + '"><b>' + c.label + '</b>' + chipHtml(a.cls, a.chip) + '<br>' + a.txt + '</div>';
+    h += '<div class="crit" style="border-color:' + (a.cls==='red'?'#ff5d5d':'#ffd23f') + '"><b>' + escapeHtml(c.label) + '</b>' + chipHtml(a.cls, escapeHtml(a.chip)) + '<br>' + escapeHtml(a.txt) + '</div>';
   }
   h += '<div style="color:#7fa8d8;margin-top:4px">All four recorded "pass" \u2014 two could not have failed. Rewrite, re-run, then cite.</div>';
   document.getElementById('batteryBody').innerHTML = h;
@@ -308,5 +308,236 @@ function renderSpark(){
 function applyLive(){
   renderProto(); renderBattery(); renderSpark();
   var f = DATA.fleet;
-  if (f && f.groups){
-    for (
+  if (f && Array.isArray(f.groups)) {
+    for (var i = 0; i < nodeMeshes.length; i++) {
+      var row = f.groups[i];
+      var node = nodeMeshes[i];
+      if (!row) {
+        node.visible = false;
+        continue;
+      }
+      node.visible = true;
+      node.userData = row;
+      var color = STATUS_COLOR[row.status] || 0x888888;
+      node.material.color.setHex(color);
+      node.material.emissive.setHex(color);
+    }
+  }
+  var note = document.getElementById('note');
+  var witnesses = (DATA.witness && Array.isArray(DATA.witness.records)) ?
+      DATA.witness.records.length : null;
+  note.textContent = 'PUBLIC DATASET SNAPSHOT · ' +
+      (witnesses === null ? 'WITNESS STATE UNKNOWN' :
+       witnesses === 0 ? 'PART D NOT STARTED' : 'PART D NOT INDEPENDENTLY VERIFIED') +
+      ' · STYLIZED, NOT ANATOMICAL · SCIENCE QUALIFICATION HOLD';
+}
+function escapeHtml(value){
+  var safe = { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' };
+  return String(value == null ? '' : value).replace(/[&<>"']/g, function(x){return safe[x];});
+}
+function reportFeed(label, detail, state){
+  var badge = document.getElementById('feedBadge');
+  badge.textContent = label;
+  badge.className = 'badge ' + (state === 'fresh' ? 'live' : state === 'error' ? 'err' : 'cached');
+  document.getElementById('feedTime').textContent = detail;
+  badge.title = detail;
+}
+function sourceTime(raw){
+  if (typeof raw !== 'string' || !/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d+)?Z$/.test(raw)) {
+    throw Error('SOURCE_CLOCK_UNAVAILABLE');
+  }
+  var ms = Date.parse(raw);
+  if (!Number.isFinite(ms)) throw Error('SOURCE_CLOCK_INVALID');
+  return ms;
+}
+async function getJson(url){
+  var ctl = new AbortController();
+  var timeout = setTimeout(function(){ctl.abort();}, 9000);
+  try {
+    var response = await fetch(url, {
+      method: 'GET', credentials: 'omit', mode: 'cors', cache: 'no-store',
+      redirect: 'error', signal: ctl.signal
+    });
+    if (!response.ok) throw Error('PUBLIC_SOURCE_HTTP_' + response.status);
+    var body = await response.text();
+    if (body.length > 140000 || !body.length) throw Error('SOURCE_BYTES_INVALID');
+    var value = JSON.parse(body);
+    if (value === null || typeof value !== 'object' || Array.isArray(value)) {
+      throw Error('SOURCE_JSON_NOT_OBJECT');
+    }
+    return value;
+  } finally { clearTimeout(timeout); }
+}
+var PUBLIC_DATASET = 'SZLHOLDINGS/wink-observatory-data';
+var CORE_FILES = [
+  'fleet/snapshot.json', 'witness/records.json', 'protocol/status.json',
+  'receipts/v5-heldout.json', 'receipts/v5-bench.json', 'receipts/a10-diagnosis.json'
+];
+var KNOWN_STATUSES = new Set(['running','parked','complete','degraded','stopped']);
+var KNOWN_CRITERIA = [
+  'criterion_2_contamination','criterion_3_refusal',
+  'criterion_4_neutral','criterion_5_invented_id'
+];
+var criterionLabels = {
+  criterion_2_contamination: ['C2 CONTAMINATION','LOW POWER','yellow'],
+  criterion_3_refusal: ['C3 REFUSAL','UNINFORMATIVE','yellow'],
+  criterion_4_neutral: ['C4 NEUTRAL','UNINTERPRETABLE','red'],
+  criterion_5_invented_id: ['C5 INVENTED ID','VACUOUS THRESHOLD','red']
+};
+function validatedPublic(m, docs){
+  if (!m || m.id !== PUBLIC_DATASET || m.private !== false ||
+      typeof m.sha !== 'string' || !/^[0-9a-f]{40}$/.test(m.sha)) {
+    throw Error('PUBLIC_DATASET_REVISION_UNAVAILABLE');
+  }
+  var fleet = docs[0], witness = docs[1], proto = docs[2],
+      heldout = docs[3], bench = docs[4], a10 = docs[5];
+  if (!fleet || fleet.schema_version !== 'wink/fleet-snapshot/v0.1' ||
+      !Array.isArray(fleet.groups) || fleet.groups.length !== nodeMeshes.length ||
+      !fleet.totals || fleet.totals.itemized_here !== fleet.groups.length ||
+      !Number.isInteger(fleet.totals.groups) ||
+      fleet.totals.groups < fleet.groups.length) {
+    throw Error('PUBLIC_FLEET_SCHEMA_OR_DENOMINATOR_INVALID');
+  }
+  fleet.groups.forEach(function(row){
+    if (!row || !KNOWN_STATUSES.has(row.status) ||
+        typeof row.name !== 'string' || row.name.length > 120 ||
+        typeof row.detail !== 'string' || row.detail.length > 320 ||
+        typeof row.lane !== 'string' || row.lane.length > 80) {
+      throw Error('PUBLIC_FLEET_ITEM_INVALID');
+    }
+  });
+  var timestamp = sourceTime(fleet.captured_at);
+  if (!witness || witness.schema_version !== 'wink/witness/v0.1-draft' ||
+      witness.series_status !== 'NOT_STARTED' ||
+      !Array.isArray(witness.records) || witness.records.length !== 0) {
+    throw Error('WITNESS_CHAIN_UNVERIFIED_OR_OBSERVATION_STARTED');
+  }
+  if (!proto || proto.schema_version !== 'wink/protocol-status/v0.1' ||
+      !proto.freeze || proto.freeze.frozen !== false ||
+      !proto.open_szl || typeof proto.open_szl !== 'object' ||
+      Array.isArray(proto.open_szl)) {
+    throw Error('PROTOCOL_FREEZE_OR_SCHEMA_UNVERIFIED');
+  }
+  if (!heldout || heldout.schema_version !== 'wink/receipt-heldout/v0.1' ||
+      !Array.isArray(heldout.criteria) ||
+      heldout.criteria.length !== KNOWN_CRITERIA.length) {
+    throw Error('HELDOUT_BATTERY_INCOMPLETE');
+  }
+  var byId = Object.create(null);
+  heldout.criteria.forEach(function(row){
+    if (!row || !KNOWN_CRITERIA.includes(row.id) ||
+        Object.prototype.hasOwnProperty.call(byId, row.id) ||
+        !row.trippability_audit ||
+        typeof row.trippability_audit.finding !== 'string' ||
+        row.trippability_audit.finding.length > 900) {
+      throw Error('A9_EVIDENCE_INVALID');
+    }
+    byId[row.id] = row;
+  });
+  if (byId.criterion_4_neutral.a10_status !== 'UNINTERPRETABLE' ||
+      byId.criterion_4_neutral.trippability_audit.can_trip !== false ||
+      !a10 || a10.schema_version !== 'wink/diagnosis/v0.1') {
+    throw Error('A10_UNINTERPRETABLE_STATUS_MISSING');
+  }
+  var mappedCriteria = KNOWN_CRITERIA.map(function(id){
+    var row = byId[id], labels = criterionLabels[id];
+    return {
+      id: id, label: labels[0], short: String(row.rule || '').slice(0,120),
+      recorded_pass: row.recorded_pass === true,
+      audit: {
+        cls: labels[2], chip: labels[1],
+        txt: row.trippability_audit.finding.slice(0,680) +
+             (row.a10_status === 'UNINTERPRETABLE' ? ' · A10 UNINTERPRETABLE' : '')
+      }
+    };
+  });
+  if (!bench || bench.schema_version !== 'wink/receipt-bench/v0.1' ||
+      !Array.isArray(bench.checkpoints) ||
+      bench.checkpoints.length < 2 ||
+      bench.checkpoints.length > 10 ||
+      !bench.checkpoints.every(function(x){
+        return x && typeof x.eval_loss === 'number' &&
+               Number.isFinite(x.eval_loss) && x.eval_loss >= 0;
+      })) {
+    throw Error('BENCH_SNAPSHOT_INVALID');
+  }
+  return {
+    fleet: fleet,
+    witness: witness,
+    protocol: { freeze: false, open_szl: proto.open_szl },
+    heldout: {criteria: mappedCriteria},
+    bench: { checkpoints: bench.checkpoints },
+    sourceSha: m.sha,
+    sourceTimestamp: fleet.captured_at,
+    ageMinutes: Math.round((Date.now() - timestamp) / 60000)
+  };
+}
+var lastApproved = null;
+async function refreshPublic(){
+  try {
+    var metadata = await getJson('https://huggingface.co/api/datasets/' + PUBLIC_DATASET);
+    if (!metadata || metadata.id !== PUBLIC_DATASET || metadata.private !== false ||
+        typeof metadata.sha !== 'string' || !/^[0-9a-f]{40}$/.test(metadata.sha)) {
+      throw Error('HUB_REVISION_NOT_PINNED');
+    }
+    var pinned = 'https://huggingface.co/datasets/' + PUBLIC_DATASET +
+                 '/raw/' + metadata.sha + '/';
+    var docs = await Promise.all(CORE_FILES.map(function(path){
+      return getJson(pinned + path);
+    }));
+    var verified = validatedPublic(metadata, docs);
+    DATA = verified;
+    lastApproved = verified;
+    applyLive();
+    var age = Math.round((Date.now() - sourceTime(verified.sourceTimestamp)) / 60000);
+    var fresh = age >= 0 && age <= 15;
+    reportFeed(fresh ? 'PUBLIC SNAPSHOT' : 'STALE SNAPSHOT',
+      'Dataset ' + verified.sourceSha.slice(0,12) + ' · producer ' +
+      (age >= 0 ? age + ' min old' : 'clock skew') +
+      ' · NOT a live wet-lab instrument',
+      fresh ? 'fresh' : 'stale');
+  } catch (err) {
+    if (lastApproved) {
+      DATA = lastApproved;
+      applyLive();
+      reportFeed('CACHED SNAPSHOT', 'Last pinned source ' +
+                 lastApproved.sourceSha.slice(0,12) +
+                 ' · refresh unavailable · producer freshness NOT confirmed', 'stale');
+    } else {
+      DATA = JSON.parse(JSON.stringify(SEED));
+      applyLive();
+      reportFeed('OFFLINE BASELINE',
+                 'Illustrative source-controlled data only · no current provider readback', 'error');
+    }
+  }
+}
+function renderFrame(t){
+  requestAnimationFrame(renderFrame);
+  if (tween) {
+    tween.t = Math.min(1, tween.t + 0.035);
+    var x = tween.t * tween.t * (3 - 2 * tween.t);
+    camera.position.lerpVectors(tween.p0, tween.p1, x);
+    controls.target.lerpVectors(tween.t0, tween.t1, x);
+    if (tween.t >= 1) tween = null;
+  }
+  if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    wormGroup.rotation.y = Math.sin(t * 0.00035) * 0.12;
+    wormGroup.userData.ring.rotation.z = t * 0.00023;
+    helixGroup.rotation.y = Math.sin(t * 0.00018) * 0.14;
+  }
+  controls.update();
+  renderer.render(scene, camera);
+}
+window.addEventListener('resize', function(){
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+});
+applyLive();
+reportFeed('VERIFYING', 'Checking immutable public dataset source · no experiment stream', 'stale');
+requestAnimationFrame(renderFrame);
+refreshPublic();
+setInterval(refreshPublic, 5 * 60 * 1000);
+</script>
+</body>
+</html>

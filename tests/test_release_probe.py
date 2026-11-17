@@ -61,6 +61,8 @@ class IndependentReleaseProbeTests(unittest.TestCase):
         self.assertEqual(result["static_http_get_statuses"]["/index.html"], "200")
         self.assertEqual(result["static_http_get_statuses"]["/style.css"], "200")
         self.assertTrue(result["static_frontend_reachable"])
+        self.assertFalse(result["static_client_render_verified"])
+        self.assertEqual(result["static_client_boot_state"], "NOT_ESTABLISHED_BY_HTTP_GET")
         self.assertEqual(result["static_frontend_state"], "PUBLIC_STATIC_UI_REACHABLE")
         self.assertEqual(result["static_served_index_sha256"], "1" * 64)
         self.assertFalse(result["static_source_byte_parity_independently_verified"])

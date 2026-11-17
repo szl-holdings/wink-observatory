@@ -38,6 +38,7 @@ jobs:
           report=json.loads((Path(os.environ['RUNNER_TEMP'])/'wink-public-release-readback.json').read_text())
           fields=('github_main_sha','hf_space_revision','hf_sdk',
                   'static_site_origin','static_frontend_state',
+                  'static_client_boot_state','static_client_render_verified',
                   'static_http_get_statuses','docker_application_origin',
                   'docker_root_http_200','deployment_state','app_transport_state',
                   'telemetry_readiness','scientific_admission',

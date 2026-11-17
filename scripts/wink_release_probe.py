@@ -189,7 +189,9 @@ def observe(fetch=get) -> dict:
         "hf_sdk": sdk, "hf_provider_runtime_stage": stage,
         "static_site_origin": STATIC_URL,
         "static_http_get_statuses": static_routes,
-        "static_frontend_reachable": static_serving,
+        "static_frontend_reachable": static_serving,  # HTTP only, not JavaScript boot
+        "static_client_render_verified": False,  # real browser required separately
+        "static_client_boot_state": "NOT_ESTABLISHED_BY_HTTP_GET",
         "static_frontend_state": ("PUBLIC_STATIC_UI_REACHABLE" if static_serving
                                   else "STATIC_UI_NOT_CONFIRMED" if sdk == "static"
                                   else "NOT_APPLICABLE_TO_DOCKER"),

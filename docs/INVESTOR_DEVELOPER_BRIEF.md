@@ -26,17 +26,32 @@ decision-makers through a live 3D observational metaphor and accessible views.
 - Strict checksum/chain validation and native GitHub Actions tests.
 - Non-root Docker candidate and a manual, expected-revision HF publisher.
 
-**The public static demo is HTTP reachable; the Python candidate is not deployed.**
-Hugging Face's actual static-SDK origin
-[szlholdings-wink-observatory.static.hf.space](https://szlholdings-wink-observatory.static.hf.space/index.html)
-served GET /index.html HTTP 200 and its stylesheet HTTP 200. The public root
-redirects to /index.html. The alternate Docker-form host (without '.static')
-returns HTTP 404 because the Python/Docker backend has not been released.
-A prior report accidentally tested only that wrong host; it must not be
-repeated as a static frontend outage. Docker admission, owner-approved
-SDK transition, verified rollback, and independent API/source/runtime readback
-remain separate gates. The visible fleet telemetry is a dated public snapshot,
-not a live wet-lab experiment.
+**The existing public static URL is HTTP reachable but its published
+JavaScript did not finish booting as of the November 17 browser check.**
+An independent Chromium browser showed the original HTML ending in a partial
+`for (` expression with no closing module script/body/html. The static site
+still returned GET /index.html HTTP 200, but displayed `BOOT`,
+`starting...`, and `loading...` placeholders rather than a functioning
+Three.js dashboard. The earlier opposite claim relied on HTTP transport
+only and is superseded.
+
+The corrected GitHub candidate restores the complete 3D render loop,
+navigation and responsive canvas, reads public Hugging Face dataset files
+at an immutable single revision, displays source age, and fails closed to
+STALE SNAPSHOT or OFFLINE BASELINE rather than inventing live lab records.
+A real headless Chromium browser successfully loaded the candidate,
+displayed its public receipt/protocol panels and a STALE SNAPSHOT badge,
+with no JavaScript exceptions or failed HTTP requests. This result was
+obtained on the authorized development computer, **not** on a new deployed
+Hugging Face revision.
+
+A separate, protected-owner-reviewed, manually dispatched **static HTML-only**
+publisher is prepared. It can replace only index.html after verified,
+archived four-file source rollback, exact source/HF leases, an actually open
+maintenance window, and owner deployment approval. It does **not** alter
+the static SDK, purchase compute, train models, or release the separate
+Python/Docker backend. No new scientific findings or live wet-lab streams
+are implied by a functioning 3D visualization.
 
 ## What is not claimed
 
