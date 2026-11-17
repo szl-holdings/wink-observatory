@@ -13,7 +13,7 @@ from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = "b" * 40
-OLD = "01e1021e7e1d80a0d4754fa01ca84282cb854c85"
+OLD = "41d90e0646b84f282e9461279eb54325d5897cf7"
 NEW = "a" * 40
 FILE = b"<!doctype html>\n" + b"X" * 30000 + b"</html>\n"
 

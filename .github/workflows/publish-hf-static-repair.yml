@@ -62,7 +62,7 @@ jobs:
           set -euo pipefail
           latest="$(git ls-remote origin refs/heads/main | cut -f1)"
           test "$latest" = "$GITHUB_SHA" && test "$GITHUB_SHA" = "$EXPECTED_MAIN_SHA"
-          test "$EXPECTED_HF_SHA" = "01e1021e7e1d80a0d4754fa01ca84282cb854c85"
+          test "$EXPECTED_HF_SHA" = "41d90e0646b84f282e9461279eb54325d5897cf7"
           test "$WINDOW" = "true" && test "$SCOPE" = "true" && test "$ROLLBACK" = "true"
           python -B -m unittest discover -s tests -p 'test_*.py' -q
           python backend/validate.py
@@ -73,7 +73,7 @@ jobs:
         run: |
           set -euo pipefail
           python -I -B scripts/wink_rollback_snapshot.py \
-            --source-sha "190488e0c15e2c69cfe04681f23697e53b337b45" \
+            --source-sha "b118d2dc9246df478ba5d5a96cfc6c4b783eb148" \
             --hf-sha "$HF_SHA" \
             --out-dir "$RUNNER_TEMP/wink-rollback-original-public-static"
       - name: Preserve source-verified rollback artifact BEFORE any provider writes

@@ -462,3 +462,33 @@ a reviewed open maintenance window, one required GitHub environment owner
 approval, the complete original immutable four-file rollback artifact and
 an expected GitHub/HF source-revision compare-and-swap. A scheduled public
 browser observer must NEVER set or bypass any of those switches.
+
+
+---
+
+## Static HTML repair 2 - 2026-11-17 (owner-directed)
+
+Repair 1 (run 44091102121) published the reviewed complete index.html from
+protected main b118d2dc9246df478ba5d5a96cfc6c4b783eb148 to the static Space at
+2026-11-17T13:18:50Z, moving the provider from 01e1021e7e1d80a0d4754fa01ca84282cb854c85
+to 41d90e0646b84f282e9461279eb54325d5897cf7. Its Chromium client-boot smoke then
+correctly held: the live dataset producer had moved the fleet snapshot from the
+7-group seed to 17 operator-itemized groups including a legitimate not-found
+status, which the page contract rejected, so the public UI stayed on the
+offline baseline instead of displaying live telemetry.
+
+This change (repair 2):
+
+- frontend/index.html accepts a bounded live fleet (1..64 itemized groups),
+  renders worm telemetry nodes from the validated live snapshot rather than
+  the boot seed, and adds not-found to the legend.
+- backend/live_data.py, backend/validate.py and backend/ui.py accept the
+  not-found status from the same live producer.
+- scripts/publish_hf_static.py and publish-hf-static-repair.yml pin the new
+  predecessor 41d90e0646b84f282e9461279eb54325d5897cf7 with rollback source
+  b118d2dc9246df478ba5d5a96cfc6c4b783eb148; the two contract tests pin the
+  same revisions.
+- Science qualification, Docker migration and independent runtime admission
+  remain HOLD. The public dataset producer remains the only data authority;
+  the page displays exactly what the pinned dataset revision says, including
+  stale snapshots, and nothing is fabricated.

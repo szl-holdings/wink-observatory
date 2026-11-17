@@ -75,6 +75,7 @@
   <span class="dot" style="background:#4da6ff"></span>PARKED/COMPLETE &nbsp;
   <span class="dot" style="background:#ffb400"></span>DEGRADED &nbsp;
   <span class="dot" style="background:#ff5d5d"></span>STOPPED &nbsp;
+  <span class="dot" style="background:#9aa7b8"></span>NOT FOUND &nbsp;
   <span class="dot" style="background:#9d7bff"></span>A10 UNINTERPRETABLE
 </div>
 <div class="hud" id="links">
@@ -150,15 +151,38 @@ function textSprite(txt, color, size){
   var t = new THREE.CanvasTexture(cv); var m = new THREE.SpriteMaterial({ map: t, transparent: true, depthWrite: false });
   var s = new THREE.Sprite(m); s.scale.set(size, size/8, 1); return s;
 }
-var STATUS_COLOR = { running: 0x00ff9d, parked: 0x4da6ff, complete: 0x4da6ff, degraded: 0xffb400, stopped: 0xff5d5d };
+var STATUS_COLOR = { running: 0x00ff9d, parked: 0x4da6ff, complete: 0x4da6ff, degraded: 0xffb400, stopped: 0xff5d5d, 'not-found': 0x9aa7b8 };
 
+var MAX_FLEET_NODES = 64;
+var wormCurve = null;
 var wormGroup = new THREE.Group(); scene.add(wormGroup);
 var nodeMeshes = [];
+function clearFleetNodes(){
+  for (var i=0;i<nodeMeshes.length;i++){ wormGroup.remove(nodeMeshes[i]); }
+  nodeMeshes.length = 0;
+}
+function addFleetNodes(gs){
+  if (!Array.isArray(gs)) return;
+  for (var g=0; g<gs.length && nodeMeshes.length<MAX_FLEET_NODES; g++){
+    var t2 = 0.14 + (g / Math.max(1, gs.length-1)) * 0.72;
+    var p = wormCurve.getPoint(t2);
+    var col = STATUS_COLOR[gs[g].status] || 0x888888;
+    var node = new THREE.Mesh(new THREE.SphereGeometry(0.42, 20, 20),
+      new THREE.MeshStandardMaterial({ color: col, emissive: col, emissiveIntensity: 1.4, roughness: 0.2 }));
+    node.position.copy(p); node.userData = gs[g];
+    var glow = new THREE.Sprite(new THREE.SpriteMaterial({
+      map: glowTex('rgba(255,255,255,0.95)', gs[g].status==='running' ? 'rgba(0,255,157,0.45)' : gs[g].status==='parked' ? 'rgba(77,166,255,0.45)' : 'rgba(255,120,60,0.45)'),
+      transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
+    glow.scale.set(2.6, 2.6, 1); node.add(glow);
+    wormGroup.add(node); nodeMeshes.push(node);
+  }
+}
 (function worm(){
   var pts = [];
   for (var i=0;i<=8;i++){ var t = i/8;
     pts.push(new THREE.Vector3(-16 + t*26, Math.sin(t*Math.PI*2.2)*2.4, Math.sin(t*Math.PI*1.6)*3.2)); }
   var curve = new THREE.CatmullRomCurve3(pts);
+  wormCurve = curve;
   var body = new THREE.Mesh(new THREE.TubeGeometry(curve, 120, 0.9, 16, false),
     new THREE.MeshStandardMaterial({ color: 0x0a2f6e, emissive: 0x062048, transparent: true, opacity: 0.42, roughness: 0.35, metalness: 0.4 }));
   wormGroup.add(body);
@@ -172,20 +196,7 @@ var nodeMeshes = [];
   wormGroup.userData.ring = ring;
   var label = textSprite('THE WORM \u00b7 FLEET TELEMETRY \u00b7 STYLIZED, NOT ANATOMICAL', '#8fd0ff', 14);
   label.position.set(-3, 7.2, 0); wormGroup.add(label);
-  var gs = DATA.fleet.groups;
-  for (var g=0; g<gs.length; g++){
-    var t2 = 0.14 + (g / Math.max(1, gs.length-1)) * 0.72;
-    var p = curve.getPoint(t2);
-    var col = STATUS_COLOR[gs[g].status] || 0x888888;
-    var node = new THREE.Mesh(new THREE.SphereGeometry(0.42, 20, 20),
-      new THREE.MeshStandardMaterial({ color: col, emissive: col, emissiveIntensity: 1.4, roughness: 0.2 }));
-    node.position.copy(p); node.userData = gs[g];
-    var glow = new THREE.Sprite(new THREE.SpriteMaterial({
-      map: glowTex('rgba(255,255,255,0.95)', gs[g].status==='running' ? 'rgba(0,255,157,0.45)' : gs[g].status==='parked' ? 'rgba(77,166,255,0.45)' : 'rgba(255,120,60,0.45)'),
-      transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
-    glow.scale.set(2.6, 2.6, 1); node.add(glow);
-    wormGroup.add(node); nodeMeshes.push(node);
-  }
+  addFleetNodes(DATA.fleet.groups);
 })();
 
 var helixGroup = new THREE.Group(); helixGroup.position.set(18, 0, -6); scene.add(helixGroup);
@@ -309,6 +320,10 @@ function applyLive(){
   renderProto(); renderBattery(); renderSpark();
   var f = DATA.fleet;
   if (f && Array.isArray(f.groups)) {
+    if (f.groups.length !== nodeMeshes.length){
+      clearFleetNodes();
+      addFleetNodes(f.groups.slice(0, MAX_FLEET_NODES));
+    }
     for (var i = 0; i < nodeMeshes.length; i++) {
       var row = f.groups[i];
       var node = nodeMeshes[i];
@@ -373,7 +388,7 @@ var CORE_FILES = [
   'fleet/snapshot.json', 'witness/records.json', 'protocol/status.json',
   'receipts/v5-heldout.json', 'receipts/v5-bench.json', 'receipts/a10-diagnosis.json'
 ];
-var KNOWN_STATUSES = new Set(['running','parked','complete','degraded','stopped']);
+var KNOWN_STATUSES = new Set(['running','parked','complete','degraded','stopped','not-found']);
 var KNOWN_CRITERIA = [
   'criterion_2_contamination','criterion_3_refusal',
   'criterion_4_neutral','criterion_5_invented_id'
@@ -392,7 +407,8 @@ function validatedPublic(m, docs){
   var fleet = docs[0], witness = docs[1], proto = docs[2],
       heldout = docs[3], bench = docs[4], a10 = docs[5];
   if (!fleet || fleet.schema_version !== 'wink/fleet-snapshot/v0.1' ||
-      !Array.isArray(fleet.groups) || fleet.groups.length !== nodeMeshes.length ||
+      !Array.isArray(fleet.groups) || fleet.groups.length < 1 ||
+    fleet.groups.length > MAX_FLEET_NODES ||
       !fleet.totals || fleet.totals.itemized_here !== fleet.groups.length ||
       !Number.isInteger(fleet.totals.groups) ||
       fleet.totals.groups < fleet.groups.length) {

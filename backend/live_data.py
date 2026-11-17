@@ -111,7 +111,7 @@ def validate(docs: dict) -> None:
     if not isinstance(groups, list) or not isinstance(totals, dict) or len(groups) > 250:
         raise SourceUnavailable("FLEET_INCOMPLETE")
     if any(not isinstance(row, dict) or row.get("status") not in
-           {"running", "parked", "complete", "degraded", "stopped"} for row in groups):
+           {"running", "parked", "complete", "degraded", "stopped", "not-found"} for row in groups):
         raise SourceUnavailable("FLEET_STATUS_INVALID")
     n, itemized, active = (totals.get(k) for k in ("groups", "itemized_here", "active"))
     if (any(type(v) is not int or v < 0 for v in (n, itemized, active))
