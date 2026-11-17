@@ -88,6 +88,7 @@ allocation, or lab-data transfer is asserted here.
     python -m pip install -r requirements.txt
     python -m unittest discover -s tests -p 'test_python_observatory.py' -v
     python backend/validate.py
+    python -m training.readiness   # exits 3 while scientific training is HOLD
     uvicorn app:app --host 127.0.0.1 --port 7860
 
 Read-only HTTP API: /healthz, /readyz, /api/v1/observatory,
