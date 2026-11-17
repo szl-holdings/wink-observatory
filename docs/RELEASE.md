@@ -127,15 +127,25 @@ organization-plan classification for Docker compute Spaces; it does **not**
 authorize an SDK migration, compute allocation, subscription change, or a
 specific deployment window. Do not advertise a released Python HF runtime.
 
-A read-only GitHub Actions secret-*name* inventory found **no HF_TOKEN
-configured** at the repository level or in the protected
-hf-wink-production environment. No credential value was read, copied,
-logged, rotated or supplied. The existing manual source-owned publisher
-will stop at HF_TOKEN_NOT_CONFIGURED until the owner provisions an
-appropriately scoped credential through an approved GitHub environment
-secret channel. Never paste a token into a chat or commit it to GitHub.
-The repository environment reviewer must separately approve deployment;
-a registered secret is never itself permission to deploy.
+Read-only GitHub Actions metadata shows **no repository- or
+hf-wink-production-environment-local HF_TOKEN secret**. An additional
+organization-level metadata inspection on 2026-11-17 found that
+**both HF_TOKEN and HF_ORG_TOKEN are already defined for szl-holdings with
+visibility=all**. A repo-local absence therefore DOES NOT establish the
+publisher lacks an inherited credential: the existing secrets.HF_TOKEN
+expression may resolve to the organization-scoped secret. The secret value,
+expiry, Hugging Face write permissions, selected issuer and functional upload
+authority were NOT accessed or verified; do not claim this means deployability.
+Prior source notes that called the credential missing are superseded.
+
+An organization secret with visibility=all also creates a broad potential
+blast radius across workflows. The safer reviewable route is a dedicated
+least-privilege, write-scoped token admitted to the production environment
+after owner review, with rotation/scope evidence, without breaking other
+repos that currently consume the shared organization credential. Never copy
+a token into source, logs or chat. Do NOT alter secret visibility, rotate
+secrets, dispatch publication or treat inherited secret availability as
+maintenance-window, environment-reviewer or billing authorization.
 
 ### HF publisher SDK preflight repair (source-only)
 
@@ -155,10 +165,11 @@ reviewed helper by its fixed sibling filesystem path (not PYTHONPATH or a
 dynamic URL). Both authorized fake-provider tests and refusal cases run
 entirely offline; no real token, Space write or GPU command is involved.
 
-This removes a verified **future publication preflight code defect**, NOT the
-current missing `HF_TOKEN` configuration, environment approval, unapproved
-SDK migration window, stale producer snapshot, or missing independent runtime
-witness. No upgrade is represented as performed by this source-only repair.
+This removes a verified **future publication preflight code defect**, NOT
+the unverified permissions/scope of the inherited organization-level
+HF_TOKEN, environment reviewer approval, SDK migration window, stale
+producer snapshot, or missing independent runtime witness. No upgrade is
+represented as performed by this source-only repair.
 
 ### Exact HF Docker-bundle smoke qualification (prepublication only)
 
