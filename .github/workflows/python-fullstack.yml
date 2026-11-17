@@ -56,6 +56,18 @@ jobs:
               r=client.get("/api/v1/observatory")
               assert r.status_code == 200 and not r.json()["signature_verified"]
               assert client.get("/api/v1/training").json()["decision"] == "HOLD"
+              audit=client.get("/api/v1/acceptance-audit")
+              assert audit.status_code == 200
+              assert audit.json()["overall_admission"] == "HOLD"
+              assert audit.json()["evaluated_criteria"] == 4
+              with patch("backend.api.ena_sample", return_value={
+                  "state":"PUBLIC_ARCHIVE_UNAVAILABLE",
+                  "records":[],
+                  "observed_zero_runs":False
+              }):
+                  missing=client.get("/api/v1/sequence-catalog")
+                  assert missing.status_code == 503
+                  assert not missing.json()["observed_zero_runs"]
               assert client.get("/api/v1/compute").json()["gpu_job_launched"] is False
               assert client.get("/api/v1/build-info").json()["independent_runtime_verified"] is False
           print("OK: Python UI/ASGI, read-only API, truthful unavailable science")
