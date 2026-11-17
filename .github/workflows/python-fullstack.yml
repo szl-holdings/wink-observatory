@@ -78,6 +78,7 @@ jobs:
           import json
           from backend.live_data import fetch_public, summary
           from backend.live_sources import read_now
+          from backend.ena_catalog import sample as ena_sample
           s=fetch_public()
           e=summary(s)
           assert s["source_state"]=="PUBLIC_DATASET_READBACK" and len(s["dataset_revision"])==40
@@ -91,6 +92,18 @@ jobs:
                             "revision":hf["space_repository_revision"],
                             "sdk":hf["space_sdk"],"stage":hf["provider_runtime_stage"],
                             "independent_runtime_verified":False},sort_keys=True))
+          ena = ena_sample(force=True)
+          assert ena["state"]=="LIVE_PUBLIC_ARCHIVE_CATALOG"
+          assert len(ena["records"]) > 0 and len(ena["records"]) <= 6
+          assert ena["taxon_id"] == 6239 and not ena["raw_sequences_downloaded"]
+          assert not ena["labeled_training_data_verified"]
+          print(json.dumps({"result":"LIVE_PUBLIC_ENA_CATALOG_OBSERVED",
+                            "taxon_id":ena["taxon_id"],
+                            "record_count":len(ena["records"]),
+                            "accessions":[x["run_accession"] for x in ena["records"]],
+                            "source_kind":ena["source_kind"],
+                            "live_lab_instrument_connected":False,
+                            "training_data_licensed":False},sort_keys=True))
           print(json.dumps({"result":"PUBLIC_SOURCE_OBSERVED","dataset_revision":s["dataset_revision"],
                             "retrieved_at":s["retrieved_at"],
                             "provider_snapshot_at":e["source_snapshot_at"],
