@@ -99,6 +99,9 @@ class StaticFrontendIntegrityTests(unittest.TestCase):
             with self.subTest(token=token):
                 self.assertIn(token, browser)
         self.assertIn("playwright==1.64.0", ci)
+        self.assertIn("pull_request: {}", ci)
+        self.assertIn("branches: [main]", ci)
+        self.assertNotIn("\n    paths:", ci)
         self.assertIn("python -B scripts/wink_browser_smoke.py --target local", ci)
         self.assertIn("SOURCE_AND_3D_CLIENT_BOOT_VERIFIED", ci)
         self.assertIn("independent_scientific_validation", ci)

@@ -1,17 +1,12 @@
 name: WINK real Chromium static 3D source canary
 
+# Required check for EVERY PR/main SHA, including docs-only changes.
+# Do NOT add paths filters: a filtered workflow emits no status and blocks
+# protected main indefinitely. This real-browser gate is deliberately universal.
 on:
   push:
     branches: [main]
-    paths:
-      - frontend/index.html
-      - scripts/wink_browser_smoke.py
-      - .github/workflows/static-browser-canary.yml
-  pull_request:
-    paths:
-      - frontend/index.html
-      - scripts/wink_browser_smoke.py
-      - .github/workflows/static-browser-canary.yml
+  pull_request: {}
   workflow_dispatch: {}
 
 permissions:
