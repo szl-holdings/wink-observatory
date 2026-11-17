@@ -89,6 +89,25 @@ class StaticFrontendIntegrityTests(unittest.TestCase):
                 self.assertIn(term, self.module)
         self.assertIn("function escapeHtml(", self.module)
 
+    def test_real_chromium_source_canary_proves_draw_commands_and_moving_pixels(self):
+        browser = (ROOT / "scripts/wink_browser_smoke.py").read_text(encoding="utf-8")
+        ci = (ROOT / ".github/workflows/static-browser-canary.yml").read_text(encoding="utf-8")
+        for token in ("GL_DRAW_WITNESS", "drawElements", "drawArrays",
+                      "webgl_draw_calls_before", "webgl_draw_calls_after",
+                      "canvas_png_size_bytes", "canvas_pixel_change_observed",
+                      "sha256(before_png).digest() != sha256(after_png).digest()"):
+            with self.subTest(token=token):
+                self.assertIn(token, browser)
+        self.assertIn("playwright==1.64.0", ci)
+        self.assertIn("python -B scripts/wink_browser_smoke.py --target local", ci)
+        self.assertIn("SOURCE_AND_3D_CLIENT_BOOT_VERIFIED", ci)
+        self.assertIn("independent_scientific_validation", ci)
+        self.assertIn("contents: read", ci)
+        self.assertNotIn("secrets.", ci)
+        self.assertNotIn("upload_folder", ci)
+        self.assertNotIn("request_hardware", ci)
+        self.assertNotIn("publish_hf_static.py", ci)
+
     def test_public_3d_uses_proposed_stylized_not_verified_biology(self):
         self.assertIn("STYLIZED, NOT ANATOMICAL", self.html)
         self.assertIn("PROTOCOL v1.1 (NOT FROZEN)", self.html)

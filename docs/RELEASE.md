@@ -374,3 +374,30 @@ does not pretend to undo the provider write; the complete old static rollback
 artifact is retained for a separately authorized recovery. A successful
 browser boot still never qualifies the lab's scientific method or starts
 the separate Python/Docker backend.
+
+### Source-only real 3D graphics canary (after PR #10)
+
+The HTML static source passed a developer-local Chromium smoke test, but
+that alone did not preserve repeatable proof in CI. The source-owned
+static-browser-canary.yml now exercises exactly the reviewed source in an
+ephemeral Chromium 156+ browser as part of changes to the HTML or its
+real-browser harness. It starts a localhost HTTP server bound to 127.0.0.1,
+does not request or use Hugging Face credentials, and tears down the
+server before job exit. Its browser dependency is pinned.
+
+The browser harness now instruments the actual WebGL drawArrays/drawElements
+(and instanced variants) BEFORE page modules execute, counts real GPU/CPU
+driver draw calls, captures the actual canvas PNG, and checks that the
+compressed scene is nontrivial, that further draw calls occur during
+navigation, and that camera motion changes the canvas pixels. It also
+requires the public dataset source to be at an immutable SHA and the
+protocol and A9/A10 panels to be populated and explicitly UNINTERPRETABLE
+where necessary. It still reports the historical producer clock as STALE.
+A source canary success is strictly **not** a deployed HF browser witness,
+and has no authority to unlock protected deployment or wet-lab training.
+
+The GitHub Actions job produces a bounded JSON receipt (source only)
+and explicitly notes no provider writes, no lab model training and no
+independent scientific validation. This converts a previously one-off
+developer browser check into an auditable, reproducible 3D graphics gate
+without fabricating biology or confusing screenshots with measurements.
