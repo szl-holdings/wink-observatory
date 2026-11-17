@@ -84,3 +84,32 @@ of action authority.
   or co-signed claims.
 
 The platform prioritizes scientific credibility over decorative "green."
+
+## Verified additions — public biological research and mathematical safeguards
+
+The GitHub release candidate now uses an additional **live, read-only public
+research source**: the EMBL-EBI European Nucleotide Archive. The Python API
+samples up to six publicly indexed *C. elegans* sequencing run/study/sample
+accessions, checks NCBI taxonomy 6239, and never downloads raw reads. This is
+**public catalog metadata, not live microscopy, a new assay, a training data
+license or evidence of the partner lab's measurements**. It has its own
+availability and cache state, separate from the HF dataset revision.
+
+The platform also computes **A9/A10 criterion failure witnesses** on the
+actual published held-out receipt. The impossible neutral threshold is
+reported as UNINTERPRETABLE; the invented-ID acceptance rule requires 13 of
+15 invented identifiers before failure, illustrating why a green recorded
+pass cannot establish model quality. The code never upgrades these arithmetic
+facts into scientific acceptance.
+
+For future biological training, a deterministic connected-component split
+engine prevents the same animal, plate, experimental batch or session from
+crossing train/validation/test. It uses no real partner records and returns
+`trainable=false`: the reproducibility machinery is a tested engineering
+candidate, **not a completed animal model or a GPU training run**.
+
+Additional developer routes: `GET /api/v1/sequence-catalog` (503 when source
+unavailable) and `GET /api/v1/acceptance-audit` (mathematical HOLD). The
+methodological design is documented in
+[SCIENTIFIC_METHOD.md](SCIENTIFIC_METHOD.md), with Tierpsy, SLEAP,
+DeepLabCut and Worm-PostureNet as referenced future evaluation baselines.
