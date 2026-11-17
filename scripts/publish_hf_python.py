@@ -10,8 +10,14 @@ from pathlib import Path
 import re
 import subprocess
 import sys
+from runpy import run_path
 
 from huggingface_hub import HfApi
+
+# -I intentionally excludes local source roots from sys.path. Load only the
+# reviewed sibling source by an absolute, fixed path, not a token or PYTHONPATH.
+observed_sdk=run_path(str(Path(__file__).resolve().with_name("hf_sdk_card_gate.py")),
+                      run_name="_hf_sdk_card_gate")["observed_sdk"]
 
 SPACE="SZLHOLDINGS/wink-observatory"
 SHA=re.compile(r"[a-f0-9]{40}\Z")
@@ -43,7 +49,7 @@ def main():
     api=HfApi(token=token)
     info=api.space_info(SPACE)
     require(info.sha==expected_hf and info.private is False, "HF_REVISION_MOVED_OR_PRIVATE")
-    sdk=(info.card_data or {}).get("sdk") if isinstance(info.card_data,dict) else None
+    sdk=observed_sdk(info.card_data)
     require(sdk in ("static","docker"), "HF_SPACE_SDK_UNEXPECTED")
     # No delete_patterns. Existing Space root HTML/CSS stays in its git history,
     # and rollback must be performed through the owner publisher, not by this script.

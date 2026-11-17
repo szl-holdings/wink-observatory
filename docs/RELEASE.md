@@ -136,3 +136,26 @@ appropriately scoped credential through an approved GitHub environment
 secret channel. Never paste a token into a chat or commit it to GitHub.
 The repository environment reviewer must separately approve deployment;
 a registered secret is never itself permission to deploy.
+
+### HF publisher SDK preflight repair (source-only)
+
+A fresh anonymous Python Hugging Face Hub `space_info` inspection on November
+17, 2026 observed that `SZLHOLDINGS/wink-observatory` reports SDK `static`
+through `huggingface_hub.SpaceCardData`. That object is mapping-like but
+**is not a built-in dict**. The first source-owned Python HF publisher
+incorrectly required `isinstance(card_data, dict)` and therefore would
+always stop at `HF_SPACE_SDK_UNEXPECTED` on the actual provider return type,
+even with a legitimate approved deployment window.
+
+The repair uses only the observed `card_data.get("sdk")` protocol and accepts
+the explicit provider values `static` and `docker`. Missing, malformed,
+unrecognized or erroring card metadata continues to HOLD without a provider
+write. The `python -I -B` launcher still runs in isolated mode, loading the
+reviewed helper by its fixed sibling filesystem path (not PYTHONPATH or a
+dynamic URL). Both authorized fake-provider tests and refusal cases run
+entirely offline; no real token, Space write or GPU command is involved.
+
+This removes a verified **future publication preflight code defect**, NOT the
+current missing `HF_TOKEN` configuration, environment approval, unapproved
+SDK migration window, stale producer snapshot, or missing independent runtime
+witness. No upgrade is represented as performed by this source-only repair.
