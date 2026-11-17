@@ -1,0 +1,63 @@
+name: WINK public release witness (read-only)
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '19 8 * * *'
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+concurrency:
+  group: wink-public-release-readback
+  cancel-in-progress: false
+
+jobs:
+  observe:
+    if: github.repository == 'szl-holdings/wink-observatory' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: '3.12'
+      - name: Prove public-only release probe contract offline
+        run: python -B -m unittest discover -s tests -p 'test_release_probe.py' -v
+      - name: Observe actual public source, Space and bounded GET routes (no mutation)
+        run: python -I -B scripts/wink_release_probe.py --output "${{ runner.temp }}/wink-public-release-readback.json"
+      - name: Retain exact labeled release states (green means readback executed, not admitted)
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          report=json.loads((Path(os.environ['RUNNER_TEMP'])/'wink-public-release-readback.json').read_text())
+          fields=('github_main_sha','hf_space_revision','hf_sdk','deployment_state',
+                  'app_transport_state','telemetry_readiness','scientific_admission',
+                  'independent_runtime_verified','release_admission')
+          lines=['## WINK bounded public release witness','',
+                 'Successful workflow = observation was performed, not a release.',
+                 'No secrets, mutating operations, training, signing or collaborator contact.',
+                 '','| State | Observed value |','|---|---|']
+          for key in fields:
+              lines.append(f'| {key} | '+str(report.get(key))+' |')
+          lines += ['', '### Explicit blockers','']
+          lines += ['- '+item for item in report['blockers']]
+          Path(os.environ['GITHUB_STEP_SUMMARY']).write_text('\n'.join(lines)+'\n')
+          if report['release_admission']!='HOLD':
+              raise SystemExit('unexpected permission elevation')
+          print('NOTICE: READBACK_COMPLETED; RELEASE_ADMISSION=HOLD; blockers='+
+                ','.join(report['blockers'][:8]))
+          PY
+      - name: Preserve read-only public witness artifact
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: wink-public-release-readback-${{ github.run_id }}
+          path: ${{ runner.temp }}/wink-public-release-readback.json
+          if-no-files-found: warn
+          retention-days: 30
