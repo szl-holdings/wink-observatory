@@ -62,6 +62,8 @@ def dashboard():
               escape(ev["dataset_revision"] or "UNKNOWN")+"\n"+
               "**Readback UTC:** "+escape(ev["readback_at"] or "UNAVAILABLE")+
               " · **Provider snapshot UTC:** "+escape(ev["source_snapshot_at"] or "UNKNOWN")+
+              " · **Producer telemetry:** "+escape(ev["producer_telemetry_state"])+
+              " ("+str(ev["producer_snapshot_age_seconds"])+" s old)"+
               "\n\n**Instrument stream:** NOT CONNECTED · **Lab signature:** NOT VERIFIED. "+
               "Current public dataset metadata is distinct from current experiments.")
     overview = ("### Methods and evidence\n"+
