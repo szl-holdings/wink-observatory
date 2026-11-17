@@ -1,0 +1,124 @@
+name: WINK Python fullstack CI
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  source-contracts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.12"
+      - name: Existing WINK data contract
+        run: python backend/validate.py
+      - name: Evidence and training gates
+        run: python -B -m unittest discover -s tests -p 'test_*.py' -v
+      - name: Syntax and whitespace
+        run: |
+          python -B -m compileall -q backend app.py tests
+          git diff --check
+  python-service:
+    runs-on: ubuntu-latest
+    needs: source-contracts
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.12"
+      - name: Install exact top-level Python runtime
+        run: |
+          python -m pip install --disable-pip-version-check -r requirements.txt
+          python -m pip check
+      - name: Boot all-Python UI and ASGI app (no provider calls)
+        env:
+          GRADIO_ANALYTICS_ENABLED: "False"
+          HF_HUB_DISABLE_TELEMETRY: "1"
+        run: |
+          python - <<'PY'
+          from fastapi.testclient import TestClient
+          from unittest.mock import patch
+          from backend.api import app
+          from backend import live_data
+          from backend.ui import worm_figure
+          assert len(worm_figure([{"name":"test","status":"parked"}]).data) == 2
+          with patch("backend.api.snapshot", return_value=live_data.mirror()):
+              client=TestClient(app)
+              assert client.get("/healthz").status_code == 200
+              r=client.get("/readyz")
+              assert r.status_code == 503 and not r.json()["scientific_ready"]
+              r=client.get("/api/v1/observatory")
+              assert r.status_code == 200 and not r.json()["signature_verified"]
+              assert client.get("/api/v1/training").json()["decision"] == "HOLD"
+              audit=client.get("/api/v1/acceptance-audit")
+              assert audit.status_code == 200
+              assert audit.json()["overall_admission"] == "HOLD"
+              assert audit.json()["evaluated_criteria"] == 4
+              with patch("backend.api.ena_sample", return_value={
+                  "state":"PUBLIC_ARCHIVE_UNAVAILABLE",
+                  "records":[],
+                  "observed_zero_runs":False
+              }):
+                  missing=client.get("/api/v1/sequence-catalog")
+                  assert missing.status_code == 503
+                  assert not missing.json()["observed_zero_runs"]
+              assert client.get("/api/v1/compute").json()["gpu_job_launched"] is False
+              assert client.get("/api/v1/build-info").json()["independent_runtime_verified"] is False
+          print("OK: Python UI/ASGI, read-only API, truthful unavailable science")
+          PY
+
+  public-source-readback:
+    runs-on: ubuntu-latest
+    needs: source-contracts
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.12"
+      - name: Live bounded anonymous HF dataset readback, exact immutable revision
+        run: |
+          python - <<'PY'
+          import json
+          from backend.live_data import fetch_public, summary
+          from backend.live_sources import read_now
+          from backend.ena_catalog import sample as ena_sample
+          s=fetch_public()
+          e=summary(s)
+          assert s["source_state"]=="PUBLIC_DATASET_READBACK" and len(s["dataset_revision"])==40
+          assert e["wetlab_instrument_state"]=="NOT_CONNECTED"
+          assert not e["signature_verified"] and not e["independent_lab_verified"]
+          hf=read_now()
+          assert hf["space_id"]=="SZLHOLDINGS/wink-observatory"
+          assert len(hf["space_repository_revision"])==40
+          assert not hf["app_source_parity_verified"] and not hf["lab_instrument_verified"]
+          print(json.dumps({"result":"PUBLIC_SPACE_METADATA_OBSERVED",
+                            "revision":hf["space_repository_revision"],
+                            "sdk":hf["space_sdk"],"stage":hf["provider_runtime_stage"],
+                            "independent_runtime_verified":False},sort_keys=True))
+          ena = ena_sample(force=True)
+          assert ena["state"]=="LIVE_PUBLIC_ARCHIVE_CATALOG"
+          assert len(ena["records"]) > 0 and len(ena["records"]) <= 6
+          assert ena["taxon_id"] == 6239 and not ena["raw_sequences_downloaded"]
+          assert not ena["labeled_training_data_verified"]
+          print(json.dumps({"result":"LIVE_PUBLIC_ENA_CATALOG_OBSERVED",
+                            "taxon_id":ena["taxon_id"],
+                            "record_count":len(ena["records"]),
+                            "accessions":[x["run_accession"] for x in ena["records"]],
+                            "source_kind":ena["source_kind"],
+                            "live_lab_instrument_connected":False,
+                            "training_data_licensed":False},sort_keys=True))
+          print(json.dumps({"result":"PUBLIC_SOURCE_OBSERVED","dataset_revision":s["dataset_revision"],
+                            "retrieved_at":s["retrieved_at"],
+                            "provider_snapshot_at":e["source_snapshot_at"],
+                            "producer_telemetry_state":e["producer_telemetry_state"],
+                            "direct_wetlab_source":False},sort_keys=True))
+          PY
