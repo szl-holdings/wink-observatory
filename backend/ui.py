@@ -12,6 +12,7 @@ import plotly.graph_objects as go
 
 from backend.live_data import snapshot, research, summary
 from backend.admission import training_decision, compute_status
+from backend.live_sources import status as public_space_status
 
 CSS = """
 .gradio-container{max-width:1460px!important}
@@ -86,7 +87,7 @@ def dashboard():
                          str(row.get("a10_status",audit.get("finding","UNKNOWN")))[:180]])
     gates = [[g["id"],g["state"],g["scope"]] for g in train["gates"]]
     return (banner,worm_figure(groups),group_rows,overview,criteria,gates,
-            {"evidence":ev,"training":train,"compute":host})
+            {"evidence":ev,"training":train,"compute":host,"public_space":public_space_status()})
 
 def publications():
     r=research()
@@ -114,8 +115,8 @@ def build_ui():
         with gr.Tab("Training + HPC"):
             gates=gr.Dataframe(headers=["Admissibility","State","Required evidence"],
                                datatype=["str"]*3,interactive=False,wrap=True)
-            gr.Markdown("**Supercomputer integration:** read-only gpu-bridge adapter is "+
-                        "UNCONFIGURED until an owner-pinned public status contract is verified. "+
+            gr.Markdown("**Supercomputer evidence:** public signed-queue receipt readback is "+
+                        "available without credentials when enabled; it is NOT a live GPU process witness. "+
                         "No GPU job, inference or laboratory training is launched from this interface.")
         with gr.Tab("Public scientific literature"):
             paper_state=gr.Markdown("Europe PMC is a literature catalog, not live assay evidence.")
@@ -125,7 +126,7 @@ def build_ui():
         with gr.Tab("Developer + investor evidence"):
             data=gr.JSON(label="Evidence lineage and decision structure")
             gr.Markdown("Developer HTTP GET routes: /api/v1/observatory, /api/v1/research, "+
-                        "/api/v1/training, /api/v1/compute, /api/v1/build-info, /healthz, "+
+                        "/api/v1/training, /api/v1/compute, /api/v1/public-space, /api/v1/build-info, /healthz, "+
                         "/readyz, /docs. No write or execution endpoints.")
             gr.Markdown("[Source repository](https://github.com/szl-holdings/wink-observatory)"+
                         " · [Pinned public feed](https://huggingface.co/datasets/SZLHOLDINGS/wink-observatory-data)"+
