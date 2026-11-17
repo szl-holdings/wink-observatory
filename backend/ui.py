@@ -101,7 +101,7 @@ def publications():
 
 def sequencing():
     """Live public ENA accession catalog, never private biological assay results."""
-    result = ena_sample(force=True)
+    result = ena_sample()  # Public button must respect ten-minute cache/rate budget.
     scope = ("### EMBL-EBI ENA: **"+result["state"]+"**\n"+
              "Fixed NCBI taxonomy: 6239 (*C. elegans*). At most six catalog records. "+
              "Bounded sample, **not a census**, not a live experiment, "+
