@@ -50,6 +50,10 @@ jobs:
           assert len(worm_figure([{"name":"test","status":"parked"}]).data) == 2
           with patch("backend.api.snapshot", return_value=live_data.mirror()):
               client=TestClient(app)
+              # This exercises the actual mounted Gradio HTML route, not only API imports.
+              root = client.get("/", follow_redirects=False)
+              assert root.status_code == 200, "Python UI root must be directly GET reachable"
+              assert "text/html" in root.headers.get("content-type", "")
               assert client.get("/healthz").status_code == 200
               r=client.get("/readyz")
               assert r.status_code == 503 and not r.json()["scientific_ready"]

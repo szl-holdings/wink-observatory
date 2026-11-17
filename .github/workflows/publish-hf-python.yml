@@ -94,3 +94,28 @@ jobs:
           print(json.dumps({"source":"public-HF-metadata","space_sha":data.get("sha"),
                             "sdk":"docker","independent_runtime_verified":False}))
           PY
+
+      - name: Probe serving Python routes against exact current protected source
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 12); do
+            if python -I -B scripts/wink_release_probe.py \
+              --strict-transport --output "$RUNNER_TEMP/wink-post-deploy.json"; then
+              echo "::notice::WINK HTTP and declared main-source transport witnessed. Independent module-byte, signature, science and owner authority are still HOLD."
+              exit 0
+            fi
+            if [ "$attempt" -ge 12 ]; then
+              echo "::error::WINK_PUBLIC_TRANSPORT_NOT_PROVED: inspect pinned report, preserve previous HF revision and use the approved rollback path."
+              exit 1
+            fi
+            sleep 12
+          done
+      - name: Retain last labeled HTTP/source readback even if publication fails
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: wink-post-deploy-readback-${{ github.run_id }}
+          path: ${{ runner.temp }}/wink-post-deploy.json
+          if-no-files-found: warn
+          retention-days: 30
