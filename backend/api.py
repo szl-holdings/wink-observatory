@@ -8,7 +8,7 @@ from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 import gradio as gr
 
-from backend.live_data import fresh, research, snapshot, summary
+from backend.live_data import fresh, producer_fresh, research, snapshot, summary
 from backend.admission import compute_status, training_decision
 from backend.ui import build_ui
 
