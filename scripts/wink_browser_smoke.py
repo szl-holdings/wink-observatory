@@ -24,6 +24,26 @@ LOCAL = "http://127.0.0.1:18760/frontend/index.html"
 PUBLIC = "https://szlholdings-wink-observatory.static.hf.space/index.html"
 SOURCE_STATES = {"STALE SNAPSHOT", "PUBLIC SNAPSHOT"}
 NO_DATA_STATES = {"CACHED SNAPSHOT", "OFFLINE BASELINE"}
+
+
+def node_count_admission(target: str, count: object) -> tuple[bool, bool]:
+    """Split optional PUBLIC node metrics from mandatory LOCAL instrumentation.
+
+    The deployed static client at d2a0de1 predates the renderedNodes DOM
+    property, though it demonstrably renders WebGL with source-fed panels
+    and working navigation. An absent count is UNKNOWN, not a measured zero.
+    New source candidates must expose their exact bounded itemized count.
+    A present but invalid count is never mistaken for legacy absence.
+    Returns (node_count_gate, count_was_verified).
+    """
+    if target not in {"local", "public"}:
+        raise ValueError("UNAPPROVED_BROWSER_TARGET")
+    if type(count) is int and 1 <= count <= 256:
+        return True, True
+    if target == "public" and count is None:
+        return True, False
+    return False, False
+
 BROWSER_ARGS = ["--no-sandbox", "--disable-dev-shm-usage", "--use-gl=angle",
                 "--use-angle=swiftshader", "--enable-unsafe-swiftshader"]
 # Count real WebGL draw commands, not just a canvas DOM node/context.
@@ -85,7 +105,10 @@ def observe(target: str) -> dict:
                           document.querySelector('#c')?.getContext('webgl')),
                 navCount:document.querySelectorAll('#navBtns button').length,
                 drawCalls:window.__wink_draw_calls||0,
-                renderedNodes:Number(document.getElementById('feedBadge')?.dataset.renderedNodes||0)
+                renderedNodes:(() => {
+                    const raw = document.getElementById('feedBadge')?.dataset.renderedNodes;
+                    return raw === undefined ? null : Number(raw);
+                })()
               })""")
             # The tab is meaningful only if the module actually registered
             # interaction handlers; syntactic HTML without JS would fail.
@@ -107,6 +130,9 @@ def observe(target: str) -> dict:
                 "C4 NEUTRAL" in data["battery"] and
                 "UNINTERPRETABLE" in data["battery"]
             )
+            node_count_gate, node_count_observed = node_count_admission(
+                target, data.get("renderedNodes")
+            )
             rendered = (source_loaded and panels_ready and
                         data.get("hasWebGL") is True and
                         isinstance(data.get("canvasWidth"), int) and
@@ -115,8 +141,7 @@ def observe(target: str) -> dict:
                         data.get("navCount") == 4 and
                         "active" in (nav_active or "") and
                         data.get("drawCalls",0) >= 100 and
-                        type(data.get("renderedNodes")) is int and
-                        1 <= data["renderedNodes"] <= 256 and
+                        node_count_gate and
                         post_draws > data.get("drawCalls",0) and
                         len(before_png) > 15000 and len(after_png) > 15000 and
                         sha256(before_png).digest() != sha256(after_png).digest() and
@@ -131,7 +156,14 @@ def observe(target: str) -> dict:
                 "feed_badge": badge,
                 "feed_detail": data.get("feedTime"),
                 "has_webgl": data.get("hasWebGL"),
-                "itemized_worm_nodes": data.get("renderedNodes"),
+                "itemized_worm_nodes": data.get("renderedNodes") if node_count_observed else None,
+                "itemized_node_count_verified": node_count_observed,
+                "itemized_node_count_state": (
+                    "DOM_RENDERED_NODE_COUNT_OBSERVED" if node_count_observed
+                    else "NOT_EXPOSED_BY_LEGACY_PUBLIC_HTML" if target == "public"
+                    and data.get("renderedNodes") is None
+                    else "NODE_COUNT_MISSING_OR_INVALID"
+                ),
                 "webgl_draw_calls_before": data.get("drawCalls"),
                 "webgl_draw_calls_after": post_draws,
                 "canvas_png_size_bytes": len(before_png),

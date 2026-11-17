@@ -98,6 +98,10 @@ def classify(browser: Any, transport: Any) -> dict:
         "browser_webgl_draws_before": browser.get("webgl_draw_calls_before"),
         "browser_webgl_draws_after": browser.get("webgl_draw_calls_after"),
         "browser_canvas_pixel_change_observed": browser.get("canvas_pixel_change_observed"),
+        "public_itemized_node_count": browser.get("itemized_worm_nodes")
+        if browser.get("itemized_node_count_verified") is True else None,
+        "public_itemized_node_count_verified": browser.get("itemized_node_count_verified") is True,
+        "public_itemized_node_count_state": browser.get("itemized_node_count_state", "UNAVAILABLE"),
         "browser_js_exceptions": browser.get("js_exceptions"),
         "public_client_boot_verified": bool(status == "PUBLIC_STATIC_CLIENT_BOOT_OBSERVED"),
         "deployment_observation": status,
