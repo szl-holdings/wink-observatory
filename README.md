@@ -103,3 +103,26 @@ reviewed acceptance criteria, signer pins and a bounded GPU budget.
 See [release and rollback](docs/RELEASE.md) and
 [the Python container manifest](deploy/hf/README.md). Source-revision alignment,
 deployment, owner approval and independent scientific evidence stay separate.
+
+## Public sequencing science and reproducible acceptance arithmetic (source candidate)
+
+The Python research platform now includes the fixed-taxonomy **EMBL-EBI ENA
+public sequencing accession catalog**. It samples at most six `C. elegans`
+run/study/sample metadata rows (NCBI taxon 6239); it neither downloads FASTQ
+files nor claims a current laboratory assay. `GET /api/v1/sequence-catalog`
+returns HTTP 503 when the archive is unavailable, not an invented zero.
+
+`GET /api/v1/acceptance-audit` evaluates the exact public v5 receipt's A9/A10
+threshold arithmetic. Four recorded pass flags **do not** clear scientific
+admission: one neutral threshold is mathematically impossible to trip and
+its underlying metric is marked UNINTERPRETABLE. A bound of 0.80 on invented
+identifiers requires 13/15 errors to fail. No performance conclusion is claimed.
+
+`training/cohort_splits.py` rehearses group-disjoint holdout partitions with
+animal/plate/batch/session connectivity and pinned dataset hashes. It does not
+read laboratory records or start training. See
+[scientific methods and leader baselines](docs/SCIENTIFIC_METHOD.md) for
+references, limitations and release gates.
+
+**Release state:** Python source and tests in GitHub do not imply the
+public Hugging Face Space has migrated away from its existing static SDK.
