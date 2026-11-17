@@ -1,0 +1,89 @@
+name: WINK public browser runtime witness (read-only)
+
+# Do not confuse source Chromium CI with actual deployed HF 3D UI.
+# A broken public application is a successfully OBSERVED HOLD, never green
+# deployment admission, and never a reason to mutate provider state here.
+on:
+  schedule:
+    - cron: '43 9 * * *'
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: wink-public-static-client-observer
+  cancel-in-progress: false
+
+jobs:
+  public-browser:
+    name: Observe real deployed HF static client and retain truth states
+    if: github.repository == 'szl-holdings/wink-observatory' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: '3.12'
+      - name: Verify read-only monitor behavior without internet or browser
+        run: python -B -m unittest discover -s tests -p 'test_public_runtime_watch.py' -v
+      - name: Install pinned ephemeral browser only
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check playwright==1.64.0
+          python -m playwright install chromium --with-deps
+      - name: Read actual public HF Space metadata and execute its real browser
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -I -B scripts/wink_public_runtime_watch.py \
+            --output "$RUNNER_TEMP/wink-real-public-client.json"
+      - name: Report distinct source, static HTTP, client, training and science states
+        if: always()
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          report=Path(os.environ["RUNNER_TEMP"])/"wink-real-public-client.json"
+          lines=[
+            "## WINK independent public browser observation",
+            "",
+            "**A successful observer run is not a successful production release.**",
+            "The exact public client boot is checked independently of GitHub source CI.",
+            "",
+          ]
+          if report.is_file():
+              r=json.loads(report.read_text())
+              fields=("github_main_sha","hf_revision","hf_sdk",
+                      "public_static_http_reachable","deployment_observation",
+                      "browser_badge","browser_feed_detail",
+                      "public_client_boot_verified","release_admission")
+              lines += ["| State | Observed |", "| --- | --- |"]
+              for key in fields:
+                  lines.append("| "+key+" | "+str(r.get(key)).replace("|","/")+" |")
+              lines += [
+                "",
+                "Public frontend source parity independently verified: **NO**",
+                "Independent lab / owner countersignature / model qualification: **NO**",
+                "HF credentials, publication or GPU training actions: **NONE**",
+              ]
+              if r["release_admission"] != "HOLD":
+                  raise SystemExit("PUBLIC_CLIENT_OBSERVER_SCIENTIFIC_ADMISSION_ESCALATION")
+          else:
+              lines += ["**OBSERVER INCOMPLETE: missing runtime JSON. No deployment claims.**"]
+          Path(os.environ["GITHUB_STEP_SUMMARY"]).write_text("\n".join(lines)+"\n")
+          PY
+      - name: Preserve public browser observation artifact, even on observer failure
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: wink-public-static-browser-witness-${{ github.run_id }}
+          path: ${{ runner.temp }}/wink-real-public-client.json
+          if-no-files-found: warn
+          retention-days: 30

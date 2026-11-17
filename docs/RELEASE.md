@@ -420,3 +420,45 @@ This requirement applies to GitHub source admission only. Passing source
 Chromium must NEVER automatically approve the HF environment reviewer,
 maintenance window, provider token, HF SDK migration, lab signatures,
 labeled biological data or GPU training.
+
+## Deployed static 3D browser witness — scheduled, independent of source CI
+
+The repo now has two intentionally separate browser evidence rails. Existing
+static-browser-canary.yml runs real Chromium against **GitHub HTML served on
+localhost**, and is mandatory for protected-source PR admission. It cannot
+prove which exact HTML is currently deployed to Hugging Face.
+
+The new public-browser-runtime-watch.yml runs daily at 09:43 UTC or by
+manual, read-only workflow dispatch from protected main. It starts Chromium
+against the **actual public** static Hugging Face origin and independently
+reads GitHub main SHA, HF Space SHA/SDK and static HTTP status. It retains a
+small JSON evidence receipt under scripts/wink_public_runtime_watch.py.
+This is a standalone observation workflow, **not** a required PR check, not a
+producer job, and not a path to mutating the public Space.
+
+Its verdict separates:
+- PUBLIC_STATIC_CLIENT_BOOT_HOLD: real public HTTP is reachable but the
+  actual browser did not complete the 3D/data/navigation acceptance check.
+  The existing 01e1021e... published static HTML is expected to be here.
+- PUBLIC_STATIC_CLIENT_BOOT_OBSERVED: public client WebGL draws, canvas
+  pixel changes, real navigational behavior and labeled pinned public
+  source are observed by Chromium. This does NOT qualify signed source
+  parity, production release authorization or scientific validation.
+- STATIC_HTTP_UNAVAILABLE or INCOMPLETE_PUBLIC_OBSERVATION: provider data,
+  transport or browser instrumentation was unavailable. Unknown is NOT
+  zero observations, a deployment, or a regression pass.
+- STATIC_CLIENT_NOT_APPLICABLE_TO_CURRENT_SDK: HF migrated away from static;
+  a separately reviewed Docker runtime witness is needed.
+
+A functioning *observation process* records a known broken public frontend
+as a **documented HOLD**, not a secretly successful deployment. A browser
+infrastructure failure is a failed observation with a retained JSON
+manifest whenever one could be generated. No HF credential, collaborator
+dataset, token, GPU, publish operation, DNS write, email or training action
+is available in this workflow.
+
+The actual operator-approved static repair workflow remains protected by
+a reviewed open maintenance window, one required GitHub environment owner
+approval, the complete original immutable four-file rollback artifact and
+an expected GitHub/HF source-revision compare-and-swap. A scheduled public
+browser observer must NEVER set or bypass any of those switches.
