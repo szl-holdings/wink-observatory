@@ -10,6 +10,7 @@ import gradio as gr
 
 from backend.live_data import fresh, producer_fresh, research, snapshot, summary
 from backend.admission import compute_status, training_decision
+from backend.live_sources import status as public_space_status
 from backend.ui import build_ui
 
 api=FastAPI(title="WINK Observatory",version="1.0.0",
@@ -53,6 +54,10 @@ def training():
 @api.get("/api/v1/compute")
 def compute():
     return compute_status()
+
+@api.get("/api/v1/public-space")
+def public_space():
+    return public_space_status()
 
 @api.get("/api/v1/build-info")
 def build_info():
