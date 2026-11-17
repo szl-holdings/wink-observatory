@@ -124,11 +124,13 @@ def audit(record: dict) -> dict:
             "protocol": "WINK-v1.1-draft-A9-A10",
             "evaluated_criteria": len(out),
             "overall_admission": "HOLD",
+            "a10_interpretation_source": "data/receipts/a10-diagnosis-supersession-20261117.json",
+            "a10_interpretation_scope": "SOURCE_REVIEW_NOT_NEW_MEASUREMENT",
             "independent_evaluation_verified": False,
             "scientific_model_qualified": False,
             "warnings": ["Recorded pass != independently validated pass",
                          "Reachable mathematical failure != adequate statistical power",
-                         "A10 neutral metric measures letter-format, not accuracy",
+                         "A10 parsed-option correctness conflates answer and formatting; low-score cause unknown; arm independence not established",
                          "No sample-independent or laboratory countersigned witness"],
             "findings": out}
 

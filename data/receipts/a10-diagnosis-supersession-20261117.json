@@ -1,0 +1,44 @@
+{
+  "schema_version": "wink/diagnosis-supersession/v0.1",
+  "record_id": "a10-diagnosis-supersession-20261117",
+  "recorded_date": "2026-11-17",
+  "status": "HISTORICAL_INTERPRETATION_CORRECTED_NOT_RERUN",
+  "supersedes": {
+    "path": "data/receipts/a10-diagnosis.json",
+    "sha256": "58fa67b8becc9310b86def601a8bc31624714c57ccc8b4709c3fb37789b73f5e",
+    "source_commit": "b118d2dc9246df478ba5d5a96cfc6c4b783eb148",
+    "scope": "answer, evidence.mechanism and evidence.statistics.conclusion; historical bytes retained"
+  },
+  "replacement": {
+    "metric": "Correct-answer rate conditional on extracting the first standalone A-D token from uppercased generated output; format errors, truncation and wrong options are conflated. It is not pure format compliance.",
+    "lowercase": "Accepted because the output is uppercased before regex matching. Verbose output can also score if its first standalone A-D token matches the correct option.",
+    "cause_of_low_observation": "UNKNOWN_WITHOUT_PER_ITEM_OUTPUTS",
+    "arm_independence": "NOT_ESTABLISHED: the archived source attaches PEFT to base before measuring both arms without an adapter-disable context.",
+    "statistics": "Do not infer a scoring artifact from the 0.05/0.05 summary or use an independent-arm chance calculation as causal evidence. The archived arms are not independently isolated.",
+    "preservation_verdict": "UNINTERPRETABLE",
+    "criterion_floor": -0.05,
+    "criterion_can_fail": false
+  },
+  "evidence": {
+    "archived_source_url": "https://huggingface.co/datasets/SZLHOLDINGS/frontier-54-runs/resolve/060bbcb4098f9c2481ac1046cf3a3bd0e61aa932/collaboration/vgl-b1-exports/salad-frontier-v5-r1/receipts/salad-v5-frontier-r1-heldout/heldout_eval.py",
+    "archived_source_sha256": "f01d1886c7a0949616476e32b944be70184baa1b34688be1d6e8f5fb533db8a0",
+    "source_model_archive_revision": "58785fa2b63e4b9d1763e1ab1180b43f501679a9",
+    "function_lines": [
+      119,
+      127
+    ],
+    "neutral_acc_source_excerpt": "def neutral_acc(model, tok):\n    correct = 0\n    for q, opts, ans in NEUTRAL_QA:\n        body = q + \"\\n\" + \"\\n\".join(f\"{chr(65+i)}) {o}\" for i, o in enumerate(opts)) + \"\\nAnswer with a single letter.\"\n        r = generate(model, tok, body, 16).strip()\n        m = re.search(r\"\\b([A-D])\\b\", r.upper())\n        if m and (ord(m.group(1)) - 65) == ans:\n            correct += 1\n    return correct / len(NEUTRAL_QA), correct\n",
+    "amendment_url": "https://huggingface.co/datasets/SZLHOLDINGS/frontier-54-runs/resolve/060bbcb4098f9c2481ac1046cf3a3bd0e61aa932/collaboration/vgl-b1-exports/salad-frontier-v5-r1/receipts/integrity-amendment-20261116T181433Z/AMENDMENT.md",
+    "heldout_audit_url": "https://huggingface.co/datasets/SZLHOLDINGS/frontier-54-runs/resolve/060bbcb4098f9c2481ac1046cf3a3bd0e61aa932/collaboration/vgl-b1-exports/salad-frontier-v5-r1/receipts/integrity-amendment-20261116T181433Z/heldout-audit.json"
+  },
+  "limits": {
+    "source_match_is_execution_attestation": false,
+    "gpu_rerun_performed": false,
+    "new_measurement_performed": false,
+    "historical_receipts_changed": false,
+    "protocol_frozen": false,
+    "independent_B1_reproduction": false
+  },
+  "overturning_evidence": "Per-item archived outputs plus an independently isolated, immutable-input-bound run could resolve causes of the low observation; summaries alone cannot.",
+  "publication_scope": "Source-only supersession. Does not assert deployment to the HF Space or dataset, nor delivery of a correction to any collaborator."
+}

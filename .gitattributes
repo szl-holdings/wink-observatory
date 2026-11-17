@@ -1,0 +1,4 @@
+# Immutable receipt bytes must stay LF across Windows autocrlf checkouts.
+# These SHA-256-bound JSON records remain reviewable text with exact LF bytes.
+data/receipts/a10-diagnosis.json text eol=lf
+data/receipts/a10-diagnosis-supersession-20261117.json text eol=lf
