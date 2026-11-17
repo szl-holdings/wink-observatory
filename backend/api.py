@@ -12,6 +12,7 @@ from backend.live_data import fresh, producer_fresh, research, snapshot, summary
 from backend.admission import compute_status, training_decision
 from backend.live_sources import status as public_space_status
 from backend.ena_catalog import sample as ena_sample
+from backend.falsifiability import public_audit
 from backend.ui import build_ui
 
 api=FastAPI(title="WINK Observatory",version="1.0.0",
@@ -43,6 +44,12 @@ def readyz():
 @api.get("/api/v1/observatory")
 def observatory():
     return {"schema":"wink.observatory.public-evidence/v1",**summary(snapshot())}
+
+@api.get("/api/v1/acceptance-audit")
+def acceptance_audit():
+    """Exact rate-threshold arithmetic; retains scientific HOLD."""
+    return public_audit(snapshot())
+
 
 @api.get("/api/v1/sequence-catalog")
 def sequence_catalog():
