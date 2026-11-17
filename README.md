@@ -1,7 +1,7 @@
 <!-- szl:header v1 -->
 # WINK Observatory
 
-**A live 3D instrument for the co-signed SZL Holdings × Vidal-Gadea Lab evaluation protocol (v1.1, not frozen).**
+**A 3D research evidence instrument for the proposed SZL Holdings and Vidal-Gadea Lab evaluation protocol (v1.1, not frozen).**
 
 Open it: **[WINK Observatory Space](https://huggingface.co/spaces/SZLHOLDINGS/wink-observatory)** ·
 Live data: **[wink-observatory-data](https://huggingface.co/datasets/SZLHOLDINGS/wink-observatory-data)** ·
@@ -65,3 +65,40 @@ operator-verified groups are itemized. Trust never 100%.
 
 ---
 <sub>SZL Holdings · Vidal-Gadea Lab · honest by design · fail-closed · license MIT (align to estate Apache-2.0 at owner discretion)</sub>
+
+## Python full-stack candidate (November 17, 2026)
+
+This repository now includes an all-Python Gradio + FastAPI serving candidate,
+3D Plotly observability, revision-scoped Hugging Face public dataset readback,
+a separate Europe PMC literature feed, evidence-preserving source fallbacks,
+developer JSON GET routes, and explicit GPU/training HOLD gates.
+
+**Deployment is not admitted.** The existing public Hugging Face Space remains a
+static-SDK runtime until an owner-controlled, reviewer-authorized publication
+converts it. A RUNNING page, literature metadata, or provider-reported fleet
+count must not be described as live Vidal-Gadea Lab instrumentation.
+
+The WINK v1.1 protocol is draft and not frozen. Public Part D records are empty;
+the A9/A10 science findings are open. No mutual countersignature, wet-lab
+instrument feed, biological training, independent runtime verification, GPU
+allocation, or lab-data transfer is asserted here.
+
+### Python developer quickstart
+
+    python -m pip install -r requirements.txt
+    python -m unittest discover -s tests -p 'test_python_observatory.py' -v
+    python backend/validate.py
+    uvicorn app:app --host 127.0.0.1 --port 7860
+
+Read-only HTTP API: /healthz, /readyz, /api/v1/observatory,
+/api/v1/research, /api/v1/training, /api/v1/compute, /api/v1/build-info, /docs.
+
+The existing [szl-gpu-bridge](https://github.com/szl-holdings/szl-gpu-bridge)
+owns the signed and reviewed GPU queue. WINK will not become a second dispatcher.
+The current public dataset contains receipts, not licensed/labeled worm videos.
+Biological training requires lab authorization, an animal-disjoint holdout,
+reviewed acceptance criteria, signer pins and a bounded GPU budget.
+
+See [release and rollback](docs/RELEASE.md) and
+[the Python container manifest](deploy/hf/README.md). Source-revision alignment,
+deployment, owner approval and independent scientific evidence stay separate.
