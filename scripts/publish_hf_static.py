@@ -26,7 +26,7 @@ from huggingface_hub import HfApi
 
 SPACE = "SZLHOLDINGS/wink-observatory"
 SOURCE_REPO = "szl-holdings/wink-observatory"
-ORIGINAL_HF = "01e1021e7e1d80a0d4754fa01ca84282cb854c85"
+ORIGINAL_HF = "41d90e0646b84f282e9461279eb54325d5897cf7"
 SHA40 = re.compile(r"[a-f0-9]{40}\Z")
 ROOT = Path(__file__).resolve().parents[1]
 FILE = ROOT / "frontend" / "index.html"
