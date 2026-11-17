@@ -1,0 +1,108 @@
+name: WINK real Chromium static 3D source canary
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - frontend/index.html
+      - scripts/wink_browser_smoke.py
+      - .github/workflows/static-browser-canary.yml
+  pull_request:
+    paths:
+      - frontend/index.html
+      - scripts/wink_browser_smoke.py
+      - .github/workflows/static-browser-canary.yml
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: wink-static-source-chromium-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  static-browser:
+    name: Chromium proves live Three.js draw commands and local source boot
+    if: github.repository == 'szl-holdings/wink-observatory'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: '3.12'
+      - name: Install isolated pinned browser test dependencies only
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check playwright==1.64.0
+          python -m playwright install --with-deps chromium
+      - name: Verify real static rendering from source-controlled HTML
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m http.server 18760 --bind 127.0.0.1 \
+            > "$RUNNER_TEMP/wink-static-local-server.log" 2>&1 &
+          server_pid=$!
+          cleanup() {
+            kill "$server_pid" 2>/dev/null || true
+            wait "$server_pid" 2>/dev/null || true
+          }
+          trap cleanup EXIT
+          ready=0
+          for attempt in $(seq 1 20); do
+            if curl --silent --show-error --fail --max-time 3 \
+              -o /dev/null http://127.0.0.1:18760/frontend/index.html; then
+              ready=1
+              break
+            fi
+            sleep 1
+          done
+          test "$ready" = 1
+          python -B scripts/wink_browser_smoke.py --target local | \
+            tee "$RUNNER_TEMP/wink-static-browser-canary.json"
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          evidence=json.loads((Path(os.environ["RUNNER_TEMP"])/"wink-static-browser-canary.json").read_text())
+          assert evidence["state"]=="SOURCE_AND_3D_CLIENT_BOOT_VERIFIED"
+          assert evidence["actual_browser_render_verified"] is True
+          assert evidence["webgl_draw_calls_before"] >= 100
+          assert evidence["webgl_draw_calls_after"] > evidence["webgl_draw_calls_before"]
+          assert evidence["canvas_png_size_bytes"] > 15000
+          assert evidence["canvas_pixel_change_observed"] is True
+          assert evidence["protocol_panel_rendered"] is True
+          assert evidence["navigation_click_active"] is True
+          assert evidence["provider_writes"] is False
+          assert evidence["training_started"] is False
+          assert evidence["independent_scientific_validation"] is False
+          text=[
+            "## WINK static 3D source canary",
+            "",
+            "**This validates reviewed GitHub HTML locally, not a deployed HF Space.**",
+            "",
+            "| Check | Verified |",
+            "| --- | --- |",
+            "| Actual Chromium JavaScript and public dataset source | PASS |",
+            "| WebGL real draw commands | "+str(evidence["webgl_draw_calls_after"])+" |",
+            "| Canvas visible pixel changes | "+str(evidence["canvas_pixel_change_observed"])+" |",
+            "| Visual protocol and A9/A10 panels | PASS |",
+            "| Owner permission / HF publication | NOT GRANTED |",
+            "| Live wet-lab data / biological model | NOT CLAIMED |",
+            "| Dataset producer state | "+str(evidence["feed_badge"])+" |"
+          ]
+          Path(os.environ["GITHUB_STEP_SUMMARY"]).write_text("\n".join(text)+"\n")
+          PY
+      - name: Archive client-side source evidence without claiming provider publication
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: wink-source-chromium-${{ github.run_id }}
+          path: |
+            ${{ runner.temp }}/wink-static-browser-canary.json
+            ${{ runner.temp }}/wink-static-local-server.log
+          if-no-files-found: warn
+          retention-days: 14

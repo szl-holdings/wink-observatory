@@ -17,6 +17,7 @@ from __future__ import annotations
 import argparse
 from datetime import datetime, timezone
 import json
+from hashlib import sha256
 import sys
 
 LOCAL = "http://127.0.0.1:18760/frontend/index.html"
@@ -25,6 +26,23 @@ SOURCE_STATES = {"STALE SNAPSHOT", "PUBLIC SNAPSHOT"}
 NO_DATA_STATES = {"CACHED SNAPSHOT", "OFFLINE BASELINE"}
 BROWSER_ARGS = ["--no-sandbox", "--disable-dev-shm-usage", "--use-gl=angle",
                 "--use-angle=swiftshader", "--enable-unsafe-swiftshader"]
+# Count real WebGL draw commands, not just a canvas DOM node/context.
+# Bound to the single current browser page, with no effect on provider data.
+GL_DRAW_WITNESS = """(() => {
+  window.__wink_draw_calls=0;
+  for(const klass of [window.WebGLRenderingContext,window.WebGL2RenderingContext]){
+    if(!klass) continue;
+    for(const name of ['drawArrays','drawElements','drawArraysInstanced','drawElementsInstanced']){
+      const f=klass.prototype[name];
+      if(typeof f==='function'){
+        klass.prototype[name]=function(...args){
+          window.__wink_draw_calls++;
+          return f.apply(this,args);
+        };
+      }
+    }
+  }
+})();"""
 
 
 def observe(target: str) -> dict:
@@ -36,6 +54,7 @@ def observe(target: str) -> dict:
         browser = provider.chromium.launch(headless=True, args=BROWSER_ARGS)
         try:
             page = browser.new_page(viewport={"width": 1280, "height": 800})
+            page.add_init_script(GL_DRAW_WITNESS)
             errors: list[str] = []
             page.on("pageerror", lambda exception: errors.append(str(exception)[:220]))
             status = page.goto(url, wait_until="domcontentloaded", timeout=25000)
@@ -64,11 +83,16 @@ def observe(target: str) -> dict:
                 canvasHeight:document.querySelector('#c')?.height,
                 hasWebGL:!!(document.querySelector('#c')?.getContext('webgl2') ||
                           document.querySelector('#c')?.getContext('webgl')),
-                navCount:document.querySelectorAll('#navBtns button').length
+                navCount:document.querySelectorAll('#navBtns button').length,
+                drawCalls:window.__wink_draw_calls||0
               })""")
             # The tab is meaningful only if the module actually registered
             # interaction handlers; syntactic HTML without JS would fail.
+            before_png = page.locator("canvas#c").screenshot(timeout=15000)
             page.locator('#navBtns button[data-v="worm"]').click(timeout=4000)
+            page.wait_for_timeout(650)
+            after_png = page.locator("canvas#c").screenshot(timeout=15000)
+            post_draws = page.evaluate("window.__wink_draw_calls||0")
             nav_active = page.locator('#navBtns button[data-v="worm"]').get_attribute("class")
             badge = data.get("badge") or "UNKNOWN"
             source_loaded = (badge in SOURCE_STATES and
@@ -89,6 +113,10 @@ def observe(target: str) -> dict:
                         data.get("canvasHeight", 0) > 100 and
                         data.get("navCount") == 4 and
                         "active" in (nav_active or "") and
+                        data.get("drawCalls",0) >= 100 and
+                        post_draws > data.get("drawCalls",0) and
+                        len(before_png) > 15000 and len(after_png) > 15000 and
+                        sha256(before_png).digest() != sha256(after_png).digest() and
                         len(errors) == 0)
             return {
                 "schema": "wink.browser-smoke/v1",
@@ -100,6 +128,10 @@ def observe(target: str) -> dict:
                 "feed_badge": badge,
                 "feed_detail": data.get("feedTime"),
                 "has_webgl": data.get("hasWebGL"),
+                "webgl_draw_calls_before": data.get("drawCalls"),
+                "webgl_draw_calls_after": post_draws,
+                "canvas_png_size_bytes": len(before_png),
+                "canvas_pixel_change_observed": (sha256(before_png).digest() != sha256(after_png).digest()),
                 "protocol_panel_rendered": panels_ready,
                 "navigation_click_active": "active" in (nav_active or ""),
                 "js_exceptions": errors[:4],
