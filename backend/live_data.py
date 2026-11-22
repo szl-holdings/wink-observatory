@@ -208,7 +208,10 @@ def research() -> dict:
                        "format": "json", "pageSize": "6", "sort": "FIRST_PDATE_D desc"})
     try:
         data = get_json("https://www.ebi.ac.uk/europepmc/webservices/rest/search?" + query)
-        rows = data.get("resultList", {}).get("result")
+        result_list = data.get("resultList")
+        if not isinstance(result_list, dict):
+            raise SourceUnavailable("LITERATURE_RESPONSE_INVALID")
+        rows = result_list.get("result")
         if not isinstance(rows, list) or len(rows) > 6:
             raise SourceUnavailable("LITERATURE_RESPONSE_INVALID")
         clean = []
