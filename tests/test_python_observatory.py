@@ -140,6 +140,16 @@ class PublicEvidenceTests(unittest.TestCase):
         self.assertFalse(result["protocol_frozen"])
         self.assertEqual(result["wetlab_instrument_state"],"NOT_CONNECTED")
 
+    def test_malformed_literature_result_list_fails_closed(self):
+        # Untrusted Europe PMC JSON must never crash the GET research handler.
+        for body in ({"resultList": []}, {"resultList": None},
+                     {"resultList": {"result": "not-a-list"}}):
+            with self.subTest(body=body):
+                with patch.object(live, "get_json", return_value=body):
+                    result = live.research()
+                self.assertEqual(result["state"], "UNAVAILABLE")
+                self.assertEqual(result["papers"], [])
+
     def test_external_research_host_is_strictly_allowlisted(self):
         for bad in ("http://huggingface.co/api/datasets/"+live.DATASET,
                     "https://evil.example/api/datasets/"+live.DATASET,
