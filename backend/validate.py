@@ -6,6 +6,7 @@ Runs on every push and PR (.github/workflows/validate.yml).
 """
 import hashlib
 import json
+import math
 import pathlib
 import re
 import sys
@@ -26,6 +27,27 @@ def fail(msg):
     sys.exit(1)
 
 
+
+def _unique_pairs(items):
+    result = {}
+    for key, value in items:
+        if key in result:
+            raise ValueError("DUPLICATE_JSON_KEY")
+        result[key] = value
+    return result
+
+
+def _reject_nonfinite(_value):
+    raise ValueError("NONFINITE_JSON_NUMBER")
+
+
+def _finite_float(value):
+    number = float(value)
+    if not math.isfinite(number):
+        raise ValueError("NONFINITE_JSON_NUMBER")
+    return number
+
+
 def load(name):
     path = BASE / name
     if not path.exists():
@@ -35,7 +57,8 @@ def load(name):
         if pat.search(raw):
             fail("secret-shaped content in " + name)
     try:
-        return json.loads(raw)
+        return json.loads(raw, object_pairs_hook=_unique_pairs,
+                          parse_constant=_reject_nonfinite, parse_float=_finite_float)
     except Exception as exc:
         fail("invalid JSON in " + name + ": " + str(exc))
 
