@@ -1,3 +1,9 @@
+---
+license: apache-2.0
+szl:
+  source_repo: szl-holdings/wink-observatory
+  proof_url: https://github.com/szl-holdings/wink-observatory
+---
 <!-- szl:header v1 -->
 # WINK Observatory
 
